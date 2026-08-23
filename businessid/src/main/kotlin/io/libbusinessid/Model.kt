@@ -17,6 +17,15 @@ public data class IdentifierInput(
     val value: String,
     val countryCode: String? = null,
 ) {
+    /**
+     * The kind as a plain token.
+     *
+     * [kind] is a value class, so its accessor carries a mangled JVM name that
+     * Java cannot spell. This reads the same thing and is what a Java caller
+     * uses.
+     */
+    val kindToken: String get() = kind.value
+
     /** Factory for the kind as a plain string, which reads better from Java. */
     public companion object {
         /**
@@ -93,6 +102,15 @@ public data class ValidationReport(
     val format: StepResult,
     val checksum: StepResult,
 ) {
+    /**
+     * The kind as a plain token.
+     *
+     * [kind] is a value class, so its accessor carries a mangled JVM name that
+     * Java cannot spell. This reads the same thing and is what a Java caller
+     * uses.
+     */
+    val kindToken: String get() = kind.value
+
     /** True when the shape matches a documented variant. */
     public val isFormatValid: Boolean
         get() = format.status == StepStatus.VALID
@@ -140,7 +158,16 @@ public data class CanonicalizationResult(
     val status: StepStatus,
     val reasonCode: ReasonCode,
     val messageKey: String? = null,
-)
+) {
+    /**
+     * The kind as a plain token.
+     *
+     * [kind] is a value class, so its accessor carries a mangled JVM name that
+     * Java cannot spell. This reads the same thing and is what a Java caller
+     * uses.
+     */
+    val kindToken: String get() = kind.value
+}
 
 /**
  * A frozen capability identifier this engine implements.
