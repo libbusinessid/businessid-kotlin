@@ -10,7 +10,7 @@ package io.libbusinessid.runtime
  * surrogate, which no UTF-8 byte sequence encodes. That is the only ill formed
  * text this API can receive, and it is what [isWellFormed] detects.
  */
-public object Utf {
+internal object Utf {
     private const val SURROGATE_OFFSET = 0x10000
     private const val LEAD_SHIFT = 10
     private const val TRAIL_MASK = 0x3FF
@@ -28,7 +28,7 @@ public object Utf {
      * ill formed and within a few bytes of the limit.
      */
     @JvmStatic
-    public fun utf8Length(s: String): Int {
+    internal fun utf8Length(s: String): Int {
         var n = 0
         var i = 0
         val len = s.length
@@ -50,7 +50,7 @@ public object Utf {
 
     /** True when [s] holds no unpaired surrogate, hence encodes to UTF-8. */
     @JvmStatic
-    public fun isWellFormed(s: String): Boolean {
+    internal fun isWellFormed(s: String): Boolean {
         var i = 0
         val len = s.length
         while (i < len) {
@@ -68,7 +68,7 @@ public object Utf {
 
     /** Code points of a well formed [s]. */
     @JvmStatic
-    public fun codePoints(s: String): IntArray {
+    internal fun codePoints(s: String): IntArray {
         val out = IntArray(s.length)
         var n = 0
         var i = 0
@@ -90,7 +90,7 @@ public object Utf {
 
     /** The string spelt by `codePoints[start until end]`. */
     @JvmStatic
-    public fun toStringOf(codePoints: IntArray, start: Int, end: Int): String {
+    internal fun toStringOf(codePoints: IntArray, start: Int, end: Int): String {
         val sb = StringBuilder(end - start)
         for (i in start until end) {
             val v = codePoints[i]

@@ -17,19 +17,22 @@ kotlin {
     jvmToolchain(BuildConstants.TOOLCHAIN_JDK)
 }
 
+// Published bytecode targets 11: the floor Android's toolchain accepts without
+// desugaring gymnastics, and low enough for any maintained JVM. Test code is not
+// published and compiles against the toolchain, which lets the test libraries
+// require a newer runtime than the library itself does.
 tasks.withType<KotlinCompile>().configureEach {
+    val isTest = name.contains("Test")
     compilerOptions {
-        // Bytecode target is 11: the floor Android's toolchain accepts without
-        // desugaring gymnastics, and low enough for any maintained JVM.
-        jvmTarget.set(JvmTarget.JVM_11)
+        jvmTarget.set(if (isTest) JvmTarget.JVM_17 else JvmTarget.JVM_11)
         allWarningsAsErrors.set(true)
         extraWarnings.set(true)
-        freeCompilerArgs.addAll("-Xjdk-release=11")
+        freeCompilerArgs.add(if (isTest) "-Xjdk-release=17" else "-Xjdk-release=11")
     }
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release.set(11)
+    options.release.set(if (name.contains("Test")) 17 else 11)
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
 }
 

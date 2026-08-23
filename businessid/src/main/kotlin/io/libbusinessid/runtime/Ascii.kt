@@ -10,7 +10,7 @@ package io.libbusinessid.runtime
  * two engines that consulted their own would disagree the day one of them
  * shipped a newer Unicode version.
  */
-public object Ascii {
+internal object Ascii {
     internal const val DIGIT_0 = 0x30
     internal const val DIGIT_9 = 0x39
     internal const val UPPER_A = 0x41
@@ -22,27 +22,27 @@ public object Ascii {
 
     /** True when [c] is `U+0030..U+0039`. */
     @JvmStatic
-    public fun isDigit(c: Int): Boolean = c in DIGIT_0..DIGIT_9
+    internal fun isDigit(c: Int): Boolean = c in DIGIT_0..DIGIT_9
 
     /** True when [c] is `U+0041..U+005A`. */
     @JvmStatic
-    public fun isUpperLetter(c: Int): Boolean = c in UPPER_A..UPPER_Z
+    internal fun isUpperLetter(c: Int): Boolean = c in UPPER_A..UPPER_Z
 
     /** True when [c] is an ASCII digit or an ASCII upper case letter. */
     @JvmStatic
-    public fun isAlphanumeric(c: Int): Boolean = isDigit(c) || isUpperLetter(c)
+    internal fun isAlphanumeric(c: Int): Boolean = isDigit(c) || isUpperLetter(c)
 
     /** Maps only `a..z` to `A..Z`, never consulting a locale. */
     @JvmStatic
-    public fun upper(c: Int): Int = if (c in LOWER_A..LOWER_Z) c - CASE_DELTA else c
+    internal fun upper(c: Int): Int = if (c in LOWER_A..LOWER_Z) c - CASE_DELTA else c
 
     /** Decimal value of an ASCII digit, or `-1`. */
     @JvmStatic
-    public fun digitValue(c: Int): Int = if (isDigit(c)) c - DIGIT_0 else -1
+    internal fun digitValue(c: Int): Int = if (isDigit(c)) c - DIGIT_0 else -1
 
     /** Base 36 value of an ASCII digit or upper case letter, or `-1`. */
     @JvmStatic
-    public fun base36Value(c: Int): Int =
+    internal fun base36Value(c: Int): Int =
         when {
             isDigit(c) -> c - DIGIT_0
             isUpperLetter(c) -> c - UPPER_A + BASE36_LETTER_OFFSET
@@ -72,16 +72,16 @@ public object Ascii {
 
     /** True when [c] belongs to the frozen `whitespace_v1` table. */
     @JvmStatic
-    public fun isWhitespace(c: Int): Boolean = WHITESPACE_V1.binarySearch(c) >= 0
+    internal fun isWhitespace(c: Int): Boolean = WHITESPACE_V1.binarySearch(c) >= 0
 
     /**
      * True when [c] is one of the code points a dispatch trim removes:
      * `U+0009..U+000D` and `U+0020`, and nothing else.
      */
     @JvmStatic
-    public fun isDispatchTrim(c: Int): Boolean = c in 0x0009..0x000D || c == 0x0020
+    internal fun isDispatchTrim(c: Int): Boolean = c in 0x0009..0x000D || c == 0x0020
 
     /** True when [c] belongs to the sorted set [set]. */
     @JvmStatic
-    public fun inSet(c: Int, set: IntArray): Boolean = set.binarySearch(c) >= 0
+    internal fun inSet(c: Int, set: IntArray): Boolean = set.binarySearch(c) >= 0
 }

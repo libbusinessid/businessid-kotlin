@@ -24,6 +24,14 @@ protobuf {
     }
     generateProtoTasks {
         all().configureEach {
+            // The descriptor set is what DescriptorTableTest compares the hand
+            // written wire scan table against: protoc reads the very schema
+            // rules.lock pins, so a schema change this repository did not follow
+            // fails the build instead of passing silently.
+            generateDescriptorSet = true
+            descriptorSetOptions.includeImports = true
+            descriptorSetOptions.path =
+                layout.buildDirectory.file("descriptors/schemas.desc").get().asFile.absolutePath
             builtins {
                 named("java") {
                     option("lite")
@@ -68,4 +76,11 @@ tasks.named("processProtoResources") {
 // Detekt must not judge protoc output.
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     exclude("**/generated/**")
+}
+
+tasks.test {
+    dependsOn(tasks.named("generateProto"))
+    val descriptors = layout.buildDirectory.file("descriptors/schemas.desc")
+    inputs.file(descriptors).withPropertyName("descriptorSet")
+    systemProperty("businessid.descriptor.set", descriptors.get().asFile.absolutePath)
 }

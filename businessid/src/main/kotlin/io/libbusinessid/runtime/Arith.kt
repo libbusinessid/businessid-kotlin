@@ -6,7 +6,7 @@ package io.libbusinessid.runtime
 /**
  * Alignment of a weight list against the code points it multiplies.
  */
-public enum class Alignment {
+internal enum class Alignment {
     /** Position `i` pairs with `weights[i]`. */
     LEFT,
 
@@ -26,13 +26,13 @@ public enum class Alignment {
  * can overflow, so an [ArithmeticException] here would be a broken invariant
  * rather than a business outcome, and it surfaces as an engine error.
  */
-public object Arith {
+internal object Arith {
     private const val DECIMAL_BASE = 10L
     private const val BASE36_TENS = 10
 
     /** `digits_to_integer(expr)`; the caller has proved the view holds at most 18 digits. */
     @JvmStatic
-    public fun digitsToInteger(v: CpView?): Long? {
+    internal fun digitsToInteger(v: CpView?): Long? {
         if (v == null || v.length == 0) return null
         var acc = 0L
         for (i in 0 until v.length) {
@@ -45,7 +45,7 @@ public object Arith {
 
     /** `mod_digits(expr, modulus)`, computed digit by digit without any wide conversion. */
     @JvmStatic
-    public fun modDigits(v: CpView?, modulus: Long): Long? {
+    internal fun modDigits(v: CpView?, modulus: Long): Long? {
         if (v == null || v.length == 0) return null
         var acc = 0L
         for (i in 0 until v.length) {
@@ -58,12 +58,12 @@ public object Arith {
 
     /** `weighted_sum(expr, weights, alignment, DIGIT_VALUE)`. */
     @JvmStatic
-    public fun weightedSumDigits(v: CpView?, weights: LongArray, alignment: Alignment): Long? =
+    internal fun weightedSumDigits(v: CpView?, weights: LongArray, alignment: Alignment): Long? =
         weightedSum(v, weights, alignment, null, base36 = false)
 
     /** `weighted_sum(expr, weights, alignment, ALNUM_BASE36)`. */
     @JvmStatic
-    public fun weightedSumBase36(v: CpView?, weights: LongArray, alignment: Alignment): Long? =
+    internal fun weightedSumBase36(v: CpView?, weights: LongArray, alignment: Alignment): Long? =
         weightedSum(v, weights, alignment, null, base36 = true)
 
     /**
@@ -74,7 +74,7 @@ public object Arith {
      * `DIGIT_VALUE`.
      */
     @JvmStatic
-    public fun weightedSumAlphabet(
+    internal fun weightedSumAlphabet(
         v: CpView?,
         weights: LongArray,
         alignment: Alignment,
@@ -136,7 +136,7 @@ public object Arith {
 
     /** `modulo(int_expr, modulus)`, Euclidean, so the result always lies in `[0, modulus)`. */
     @JvmStatic
-    public fun modulo(v: Long?, modulus: Long): Long? {
+    internal fun modulo(v: Long?, modulus: Long): Long? {
         if (v == null) return null
         val r = v % modulus
         return if (r < 0) r + modulus else r
@@ -144,14 +144,14 @@ public object Arith {
 
     /** `complement(int_expr, modulus)`; indeterminate outside `[0, modulus]`. */
     @JvmStatic
-    public fun complement(v: Long?, modulus: Long): Long? {
+    internal fun complement(v: Long?, modulus: Long): Long? {
         if (v == null || v < 0 || v > modulus) return null
         return modulus - v
     }
 
     /** `remainder_map(int_expr, values)`; indeterminate outside the table. */
     @JvmStatic
-    public fun remainderMap(v: Long?, values: LongArray): Long? {
+    internal fun remainderMap(v: Long?, values: LongArray): Long? {
         if (v == null || v < 0 || v >= values.size) return null
         return values[v.toInt()]
     }
