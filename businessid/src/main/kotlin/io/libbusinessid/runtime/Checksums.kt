@@ -11,7 +11,7 @@ import io.libbusinessid.StepStatus
  *
  * An indeterminate operand always yields `unsupported`, never `invalid`.
  */
-public object Ck {
+internal object Ck {
     private const val LUHN_MIN_LENGTH = 2
     private const val MOD97_MIN_LENGTH = 3
     private const val TEN = 10
@@ -19,11 +19,11 @@ public object Ck {
 
     /** A valid outcome, carrying no key. */
     @JvmStatic
-    public fun valid(): ChecksumOutcome = ChecksumOutcome.VALID
+    internal fun valid(): ChecksumOutcome = ChecksumOutcome.VALID
 
     /** `luhn(expr)`. */
     @JvmStatic
-    public fun luhn(v: CpView?, messageKey: String?): ChecksumOutcome {
+    internal fun luhn(v: CpView?, messageKey: String?): ChecksumOutcome {
         if (v == null || v.length < LUHN_MIN_LENGTH) return ChecksumOutcome.unsupported(messageKey)
         var sum = 0
         var double = false
@@ -43,7 +43,7 @@ public object Ck {
 
     /** `iso7064_mod97_10(expr)`. */
     @JvmStatic
-    public fun iso7064Mod97(v: CpView?, messageKey: String?): ChecksumOutcome {
+    internal fun iso7064Mod97(v: CpView?, messageKey: String?): ChecksumOutcome {
         if (v == null || v.length < MOD97_MIN_LENGTH) return ChecksumOutcome.unsupported(messageKey)
         val r = Arith.mod97OfExpanded(v) ?: return ChecksumOutcome.unsupported(messageKey)
         return if (r == 1L) ChecksumOutcome.VALID else ChecksumOutcome.invalid(messageKey)
@@ -51,7 +51,7 @@ public object Ck {
 
     /** `compare_digit(int_expr, string_expr, index)`. */
     @JvmStatic
-    public fun compareDigit(value: Long?, v: CpView?, index: Int, messageKey: String?): ChecksumOutcome {
+    internal fun compareDigit(value: Long?, v: CpView?, index: Int, messageKey: String?): ChecksumOutcome {
         if (value == null || v == null || index >= v.length) return ChecksumOutcome.unsupported(messageKey)
         val d = Ascii.digitValue(v[index])
         if (d < 0) return ChecksumOutcome.unsupported(messageKey)
@@ -60,7 +60,7 @@ public object Ck {
 
     /** `compare_slice(int_expr, string_expr, start, end)`. */
     @JvmStatic
-    public fun compareSlice(
+    internal fun compareSlice(
         value: Long?,
         v: CpView?,
         start: Int,
@@ -75,26 +75,26 @@ public object Ck {
 
     /** `compare_constant(int_expr, constant)`. */
     @JvmStatic
-    public fun compareConstant(value: Long?, constant: Long, messageKey: String?): ChecksumOutcome {
+    internal fun compareConstant(value: Long?, constant: Long, messageKey: String?): ChecksumOutcome {
         if (value == null) return ChecksumOutcome.unsupported(messageKey)
         return if (value == constant) ChecksumOutcome.VALID else ChecksumOutcome.invalid(messageKey)
     }
 
     /** `unsupported_checksum(reason_code)`. */
     @JvmStatic
-    public fun declaredUnsupported(reason: ReasonCode, messageKey: String?): ChecksumOutcome =
+    internal fun declaredUnsupported(reason: ReasonCode, messageKey: String?): ChecksumOutcome =
         ChecksumOutcome.declaredUnsupported(reason, messageKey)
 
     /** The outcome of a `choose` whose branches were all inapplicable. */
     @JvmStatic
-    public fun noBranch(): ChecksumOutcome = ChecksumOutcome.unsupported(null)
+    internal fun noBranch(): ChecksumOutcome = ChecksumOutcome.unsupported(null)
 
     /**
      * `all_checks(rule...)`: the first invalid outcome, else the first
      * unsupported one, else valid.
      */
     @JvmStatic
-    public fun allChecks(branches: Array<ChecksumOutcome>): ChecksumOutcome {
+    internal fun allChecks(branches: Array<ChecksumOutcome>): ChecksumOutcome {
         var firstUnsupported: ChecksumOutcome? = null
         for (b in branches) {
             when (b.status) {
@@ -111,7 +111,7 @@ public object Ck {
      * first unsupported outcome, else the first invalid one.
      */
     @JvmStatic
-    public fun anyCheck(branches: Array<ChecksumOutcome>): ChecksumOutcome {
+    internal fun anyCheck(branches: Array<ChecksumOutcome>): ChecksumOutcome {
         var firstUnsupported: ChecksumOutcome? = null
         var firstInvalid: ChecksumOutcome? = null
         for (b in branches) {

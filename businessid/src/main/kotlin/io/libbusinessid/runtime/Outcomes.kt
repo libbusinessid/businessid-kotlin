@@ -14,9 +14,9 @@ import io.libbusinessid.StepStatus
  * @property reason the reason the assertion declares; always one that proves invalidity.
  * @property messageKey the stable key the assertion declares, or `null`.
  */
-public class AssertionFailure internal constructor(
-    @JvmField public val reason: ReasonCode,
-    @JvmField public val messageKey: String?,
+internal class AssertionFailure internal constructor(
+    @JvmField internal val reason: ReasonCode,
+    @JvmField internal val messageKey: String?,
 )
 
 /**
@@ -28,10 +28,10 @@ public class AssertionFailure internal constructor(
  *   carries none: the key belongs to the outcome the rule declares, and a rule
  *   declares no key for succeeding.
  */
-public class ChecksumOutcome internal constructor(
-    @JvmField public val status: StepStatus,
-    @JvmField public val reason: ReasonCode,
-    @JvmField public val messageKey: String?,
+internal class ChecksumOutcome internal constructor(
+    @JvmField internal val status: StepStatus,
+    @JvmField internal val reason: ReasonCode,
+    @JvmField internal val messageKey: String?,
 ) {
     internal companion object {
         val VALID = ChecksumOutcome(StepStatus.VALID, ReasonCode.OK, null)

@@ -14,13 +14,13 @@ package io.libbusinessid.runtime
  * evaluation of the one predicate that asked for it: the graph produces a
  * boolean before any step runs.
  */
-public class CanonBuffer internal constructor(initial: IntArray) {
+internal class CanonBuffer internal constructor(initial: IntArray) {
     private var buf: IntArray = initial
     private var size: Int = initial.size
     private var cached: CpView? = null
 
     /** The value current at this point of the program. */
-    public fun view(): CpView {
+    internal fun view(): CpView {
         var v = cached
         if (v == null) {
             v = CpView(buf, 0, size)
@@ -30,17 +30,17 @@ public class CanonBuffer internal constructor(initial: IntArray) {
     }
 
     /** The value as a string. */
-    public fun snapshot(): String = Utf.toStringOf(buf, 0, size)
+    internal fun snapshot(): String = Utf.toStringOf(buf, 0, size)
 
     /** True when the current value starts with [prefix]. */
-    public fun startsWith(prefix: IntArray): Boolean {
+    internal fun startsWith(prefix: IntArray): Boolean {
         if (prefix.size > size) return false
         for (i in prefix.indices) if (buf[i] != prefix[i]) return false
         return true
     }
 
     /** `trim_whitespace()`. */
-    public fun trimWhitespace() {
+    internal fun trimWhitespace() {
         var lo = 0
         var hi = size
         while (lo < hi && Ascii.isWhitespace(buf[lo])) lo++
@@ -52,17 +52,17 @@ public class CanonBuffer internal constructor(initial: IntArray) {
     }
 
     /** `remove_whitespace()`. */
-    public fun removeWhitespace() {
+    internal fun removeWhitespace() {
         filterOut { Ascii.isWhitespace(it) }
     }
 
     /** `remove_chars(list)`, with [set] sorted by code point. */
-    public fun removeChars(set: IntArray) {
+    internal fun removeChars(set: IntArray) {
         filterOut { Ascii.inSet(it, set) }
     }
 
     /** `uppercase_ascii()`. */
-    public fun uppercaseAscii() {
+    internal fun uppercaseAscii() {
         var changed = false
         for (i in 0 until size) {
             val u = Ascii.upper(buf[i])
@@ -75,7 +75,7 @@ public class CanonBuffer internal constructor(initial: IntArray) {
     }
 
     /** `replace_prefix(from, to)`. */
-    public fun replacePrefix(from: IntArray, to: IntArray) {
+    internal fun replacePrefix(from: IntArray, to: IntArray) {
         if (!startsWith(from)) return
         val newSize = size - from.size + to.size
         ensure(newSize)
@@ -86,23 +86,23 @@ public class CanonBuffer internal constructor(initial: IntArray) {
     }
 
     /** `prepend(value)`. */
-    public fun prepend(text: IntArray) {
+    internal fun prepend(text: IntArray) {
         insertAt(0, text)
     }
 
     /** `append(value)`. */
-    public fun append(text: IntArray) {
+    internal fun append(text: IntArray) {
         insertAt(size, text)
     }
 
     /** `insert(index, value)`; an index past the end leaves the value unchanged. */
-    public fun insert(index: Int, text: IntArray) {
+    internal fun insert(index: Int, text: IntArray) {
         if (index > size) return
         insertAt(index, text)
     }
 
     /** `left_pad(length, char)`; a longer value is never truncated. */
-    public fun leftPad(length: Int, pad: Int) {
+    internal fun leftPad(length: Int, pad: Int) {
         if (size >= length) return
         val missing = length - size
         ensure(length)

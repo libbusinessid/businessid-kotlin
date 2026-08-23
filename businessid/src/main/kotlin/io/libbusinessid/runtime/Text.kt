@@ -14,13 +14,13 @@ package io.libbusinessid.runtime
  * to an absent operand yields absent, and every predicate applied to one yields
  * `false` except `IS_ABSENT`. Absence is never an error.
  */
-public class CpView internal constructor(
+internal class CpView(
     @JvmField internal val cp: IntArray,
     @JvmField internal val start: Int,
     @JvmField internal val end: Int,
 ) {
     /** Number of code points in the view. */
-    public val length: Int get() = end - start
+    internal val length: Int get() = end - start
 
     internal operator fun get(index: Int): Int = cp[start + index]
 
@@ -83,31 +83,31 @@ public class CpView internal constructor(
 }
 
 /** Text primitives shared by the emitted rules. */
-public object Txt {
+internal object Txt {
     /** `slice(expr, start, end)`. */
     @JvmStatic
-    public fun slice(v: CpView?, start: Int, end: Int): CpView? {
+    internal fun slice(v: CpView?, start: Int, end: Int): CpView? {
         if (v == null || start > end || end > v.length) return null
         return CpView(v.cp, v.start + start, v.start + end)
     }
 
     /** `slice_from(expr, start)`. */
     @JvmStatic
-    public fun sliceFrom(v: CpView?, start: Int): CpView? {
+    internal fun sliceFrom(v: CpView?, start: Int): CpView? {
         if (v == null || start > v.length) return null
         return CpView(v.cp, v.start + start, v.end)
     }
 
     /** `slice_to(expr, end)`. */
     @JvmStatic
-    public fun sliceTo(v: CpView?, end: Int): CpView? {
+    internal fun sliceTo(v: CpView?, end: Int): CpView? {
         if (v == null || end > v.length) return null
         return CpView(v.cp, v.start, v.start + end)
     }
 
     /** `before_first(expr, delimiter)`. */
     @JvmStatic
-    public fun beforeFirst(v: CpView?, needle: IntArray): CpView? {
+    internal fun beforeFirst(v: CpView?, needle: IntArray): CpView? {
         if (v == null) return null
         val at = v.indexOf(needle)
         if (at < 0) return null
@@ -116,7 +116,7 @@ public object Txt {
 
     /** `after_first(expr, delimiter)`. */
     @JvmStatic
-    public fun afterFirst(v: CpView?, needle: IntArray): CpView? {
+    internal fun afterFirst(v: CpView?, needle: IntArray): CpView? {
         if (v == null) return null
         val at = v.indexOf(needle)
         if (at < 0) return null
@@ -125,14 +125,14 @@ public object Txt {
 
     /** `strip_prefix(expr, prefix)`. */
     @JvmStatic
-    public fun stripPrefix(v: CpView?, prefix: IntArray): CpView? {
+    internal fun stripPrefix(v: CpView?, prefix: IntArray): CpView? {
         if (v == null || !v.startsWith(prefix)) return null
         return CpView(v.cp, v.start + prefix.size, v.end)
     }
 
     /** `concat(expr...)`. */
     @JvmStatic
-    public fun concat(parts: Array<CpView?>): CpView? {
+    internal fun concat(parts: Array<CpView?>): CpView? {
         var total = 0
         for (p in parts) {
             if (p == null) return null

@@ -86,3 +86,13 @@ signing {
     )
     sign(publishing.publications["maven"])
 }
+
+tasks.test {
+    // The packaging test opens what would actually be published.
+    val jar = tasks.jar.flatMap { it.archiveFile }
+    val pom = layout.buildDirectory.file("publications/maven/pom-default.xml")
+    dependsOn(tasks.jar, tasks.named("generatePomFileForMavenPublication"))
+    inputs.file(jar).withPropertyName("publishedJar")
+    systemProperty("businessid.jar", jar.get().asFile.absolutePath)
+    systemProperty("businessid.pom", pom.get().asFile.absolutePath)
+}
