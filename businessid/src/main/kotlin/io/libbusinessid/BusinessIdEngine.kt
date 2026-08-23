@@ -32,6 +32,7 @@ public class BusinessIdEngine private constructor() {
      * Applies the input bound, the dispatch and the two canonicalisation phases,
      * and stops there. Neither format nor checksum runs.
      */
+    @JvmOverloads
     public fun canonicalize(
         input: IdentifierInput,
         options: ValidationOptions = ValidationOptions(),
@@ -41,6 +42,7 @@ public class BusinessIdEngine private constructor() {
      * Runs the whole pipeline: dispatch, canonicalisation, format, then checksum
      * when the format holds.
      */
+    @JvmOverloads
     public fun validate(
         input: IdentifierInput,
         options: ValidationOptions = ValidationOptions(),
@@ -53,6 +55,7 @@ public class BusinessIdEngine private constructor() {
      * failing dispatch or format both steps read exactly as they would from
      * [validate].
      */
+    @JvmOverloads
     public fun validateFormat(
         input: IdentifierInput,
         options: ValidationOptions = ValidationOptions(),
@@ -65,6 +68,7 @@ public class BusinessIdEngine private constructor() {
      * separate name exists for readability at the call site, not to bypass the
      * format.
      */
+    @JvmOverloads
     public fun validateChecksum(
         input: IdentifierInput,
         options: ValidationOptions = ValidationOptions(),
@@ -94,8 +98,13 @@ public class BusinessIdEngine private constructor() {
          * It cannot fail and returns no error: there is nothing to load. A
          * defective ruleset stops the build of this library, not a call to this
          * method.
+         *
+         * Java calls it `BusinessIdEngine.defaultEngine()`: `default` is a
+         * keyword there, so the name Kotlin reads best is one Java cannot spell.
+         * The alias is the name `engine.md` section 15.1 uses for this operation.
          */
         @JvmStatic
+        @JvmName("defaultEngine")
         public fun default(): BusinessIdEngine = INSTANCE
     }
 }

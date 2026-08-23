@@ -44,6 +44,12 @@ tasks.withType<Test>().configureEach {
     inputs.dir(specDir).withPropertyName("spec")
     systemProperty("businessid.spec.dir", specDir.asFile.absolutePath)
     systemProperty("businessid.project.version", project.version.toString())
+    // TestHygieneTest walks these classes to prove no test method is silently
+    // dropped by JUnit for returning a value.
+    systemProperty(
+        "businessid.test.classes",
+        layout.buildDirectory.dir("classes/kotlin/test").get().asFile.absolutePath,
+    )
     testLogging {
         events("failed")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
@@ -61,6 +67,27 @@ tasks.withType<AbstractArchiveTask>().configureEach {
     isReproducibleFileOrder = true
     dirPermissions { unix("rwxr-xr-x") }
     filePermissions { unix("rw-r--r--") }
+}
+
+// Jazzer runs the fuzz targets in regression mode during an ordinary build, and
+// actually fuzzes only here, where JAZZER_FUZZ turns it on.
+private val fuzzSourceSet = extensions.getByType<JavaPluginExtension>().sourceSets.named("test")
+private val fuzzClasses = fuzzSourceSet.map { it.output.classesDirs }
+private val fuzzClasspath = fuzzSourceSet.map { it.runtimeClasspath }
+
+tasks.register<Test>("fuzz") {
+    group = "verification"
+    description = "Fuzzes the targets under io.libbusinessid.fuzz with Jazzer."
+    testClassesDirs = files(fuzzClasses)
+    classpath = files(fuzzClasspath)
+    filter {
+        includeTestsMatching("io.libbusinessid.fuzz.*")
+        isFailOnNoMatchingTests = false
+    }
+    environment("JAZZER_FUZZ", "1")
+    outputs.upToDateWhen { false }
+    reports.junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/fuzz"))
+    reports.html.outputLocation.set(layout.buildDirectory.dir("reports/tests/fuzz"))
 }
 
 detekt {
