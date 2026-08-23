@@ -1,0 +1,137 @@
+# Copyright The LibBusinessID Authors.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Deltas from the Detekt default configuration. Nothing is switched off to make
+# a finding disappear: every entry below is either a hard tightening, or a bound
+# raised for the emitted sources, which are machine written and never edited.
+
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+  warningsAsErrors: true
+
+comments:
+  UndocumentedPublicClass:
+    active: true
+    excludes: ['**/test/**', '**/generated/**']
+  UndocumentedPublicFunction:
+    active: true
+    excludes: ['**/test/**', '**/generated/**']
+  UndocumentedPublicProperty:
+    active: true
+    excludes: ['**/test/**', '**/generated/**']
+
+complexity:
+  LongMethod:
+    excludes: ['**/test/**', '**/generated/**']
+  LongParameterList:
+    excludes: ['**/test/**', '**/generated/**']
+  CyclomaticComplexMethod:
+    excludes: ['**/test/**', '**/generated/**']
+  NestedBlockDepth:
+    excludes: ['**/test/**', '**/generated/**']
+  LargeClass:
+    excludes: ['**/test/**', '**/generated/**']
+  TooManyFunctions:
+    excludes: ['**/test/**', '**/generated/**']
+  ComplexCondition:
+    excludes: ['**/test/**', '**/generated/**']
+  MethodOverloading:
+    excludes: ['**/test/**', '**/generated/**']
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
+  TooGenericExceptionThrown:
+    active: true
+  SwallowedException:
+    active: true
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true
+
+naming:
+  FunctionNaming:
+    excludes: ['**/test/**', '**/generated/**']
+  TopLevelPropertyNaming:
+    excludes: ['**/generated/**']
+  VariableNaming:
+    excludes: ['**/generated/**']
+  ObjectPropertyNaming:
+    excludes: ['**/generated/**']
+
+performance:
+  SpreadOperator:
+    active: true
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    active: true
+  UnsafeCast:
+    active: true
+  CastToNullableType:
+    active: true
+  UnnecessaryNotNullCheck:
+    active: true
+
+style:
+  MagicNumber:
+    excludes: ['**/test/**', '**/generated/**', '**/benchmarks/**']
+  MaxLineLength:
+    excludes: ['**/generated/**']
+    maxLineLength: 120
+  WildcardImport:
+    active: true
+    excludeImports: []
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: 'A V1 deliverable carries no TODO.'
+        value: 'TODO:'
+      - reason: 'A V1 deliverable carries no FIXME.'
+        value: 'FIXME:'
+      - reason: 'A V1 deliverable carries no STOPSHIP.'
+        value: 'STOPSHIP:'
+  ReturnCount:
+    excludes: ['**/test/**', '**/generated/**']
+    max: 4
+  ThrowsCount:
+    excludes: ['**/test/**', '**/generated/**']
+  UnusedPrivateMember:
+    active: true
+  UseCheckOrError:
+    active: true
+  UseRequire:
+    active: true
+  LoopWithTooManyJumpStatements:
+    excludes: ['**/generated/**']
+    maxJumpCount: 2
+
+formatting:
+  active: true
+  android: false
+  autoCorrect: false
+  MaximumLineLength:
+    excludes: ['**/generated/**']
+    maxLineLength: 120
+  ArgumentListWrapping:
+    excludes: ['**/generated/**']
+  ParameterListWrapping:
+    excludes: ['**/generated/**']
+  Indentation:
+    excludes: ['**/generated/**']
+  Wrapping:
+    excludes: ['**/generated/**']
+  MultilineExpressionWrapping:
+    excludes: ['**/generated/**']
+  StringTemplateIndent:
+    excludes: ['**/generated/**']
+  FunctionSignature:
+    excludes: ['**/generated/**']
+  ClassName:
+    excludes: ['**/generated/**']
+  FunctionName:
+    excludes: ['**/generated/**']
+  PropertyName:
+    excludes: ['**/generated/**']
