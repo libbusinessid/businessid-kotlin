@@ -28,6 +28,26 @@ the JDK the project pins. The compiler and the tests still run across the whole
 supported range, so nothing about the code goes unchecked on a newer JDK — only
 the analysis of it is pinned. `CONTRIBUTING.md` says the same for a local run.
 
+### Android lint fails a build that has not changed, and passes one that should fail
+
+**Measured.** CI failed the Android consumer on a commit that touched nothing
+in it: Google released AGP 9.3.2 and lint's `AndroidGradlePluginVersion`
+detector turned a correct pin into an error. The same commit passed locally,
+because the nested build directory was warm and `lintDebug` was up to date.
+The detector's verdict depends on a network index of released versions that it
+never declares as a task input, so its up-to-date check cannot be sound: a warm
+directory replays a pass that a cold one would refuse.
+
+**What this engine does.** The pin moves with the release rather than the check
+being disabled, since a consumer project exists to prove the artefact builds
+under the toolchain people actually have. Both consumer projects are standalone
+builds absent from the root settings file, which is why dependabot at `/` never
+saw them; they are named explicitly now, so the next release arrives as a pull
+request instead of as a red build on an unrelated change. The lint tasks are
+marked always out of date, so a local run means what it says — verified by
+re-pinning to 9.3.0 against a warm directory and watching it fail, which it
+would previously have skipped.
+
 ## Settled upstream
 
 ### 1. `engine.md` section 9.1 contradicted itself on an out of bounds access — clause removed
