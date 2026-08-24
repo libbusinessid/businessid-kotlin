@@ -36,3 +36,8 @@ independently.
   no reference to a network or file system API.
 - The published ruleset expands to 3069 operation instances, the figure `ir.md`
   section 2 states.
+- Benchmarks on an Apple M-series machine, JDK 17: a simple validation 218 ns, a
+  SIRET with its nested SIREN checksum 311 ns, an ISO 7064 modulo 97 over twenty
+  characters 472 ns, an unknown kind rejected in 31 ns, and a first validation
+  in a fresh JVM 46 us. No figure is normative; they exist so a regression has
+  something to be measured against.
