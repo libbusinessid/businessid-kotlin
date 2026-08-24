@@ -26,7 +26,7 @@ independently.
 
 - The shared conformance runner, pinned to the commit `rules.lock` records,
   reports 666 of 666 cases matched, 0 differed, against rules `2026.08.26`.
-- Coverage of hand-written code: 99.01 % of lines, 92.64 % of branches. Coverage
+- Coverage of hand-written code: 99.01 % of lines, 92.91 % of branches. Coverage
   of the emitted rules under the corpus: 88.58 % of lines, 68.61 % of branches,
   reported apart and never gated.
 - Mutation testing scores 90.4 % over the runtime primitives and the pipeline,

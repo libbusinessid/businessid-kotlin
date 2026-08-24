@@ -253,7 +253,7 @@ the conformance corpus, not the engine, and a threshold there would fail an
 irreproachable engine on a gap in the corpus.
 
 ```text
-hand written   lines  99.01%   branches  92.64%
+hand written   lines  99.01%   branches  92.91%
 emitted        lines  88.58%   branches  68.61%
 ```
 
