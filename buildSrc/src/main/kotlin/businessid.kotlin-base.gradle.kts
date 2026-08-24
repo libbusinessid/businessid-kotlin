@@ -42,6 +42,10 @@ tasks.withType<Test>().configureEach {
     // inputs of the build, never resources of the published jar.
     val specDir = rootProject.layout.projectDirectory.dir("spec")
     inputs.dir(specDir).withPropertyName("spec")
+    // The README is read by ReadmeTest, so an edit to it has to re-run the
+    // tests. Without this the guard passes on a stale result, which is worse
+    // than having no guard.
+    inputs.file(rootProject.layout.projectDirectory.file("README.md")).withPropertyName("readme")
     systemProperty("businessid.spec.dir", specDir.asFile.absolutePath)
     systemProperty("businessid.project.version", project.version.toString())
     // TestHygieneTest walks these classes to prove no test method is silently
