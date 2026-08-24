@@ -10,7 +10,7 @@ kotlin = "2.4.10"
 # one that compiles it: a metadata version a consumer cannot read makes a
 # library unusable, and the built-in Kotlin of the current Android Gradle plugin
 # is 2.2.
-kotlinCompatibility = "2.2.21"
+kotlinCompatibility = "2.4.10"
 protobuf = "4.36.0"
 protobufPlugin = "0.10.0"
 detekt = "1.23.8"
