@@ -47,10 +47,33 @@ on success claims that work was done.
 ## The specification is upstream
 
 `spec/` is a verbatim copy of the specification repository, pinned by
-`rules.lock` to a digest and a commit. **Never edit anything under `spec/`.**
+`rules.lock` to a digest and a commit. **Never edit anything under `spec/` by
+hand** — not the bundle, not the corpus, not the schemas, not the prose.
 Problems with the specification are reported upstream and recorded in
 `SPEC-ISSUES.md`; a resync replaces the whole directory and re-verifies the eight
 digests.
+
+**`spec/PROVENANCE.md` is the exception to where these files come from, and not
+to the rule above.** It is written downstream rather than copied, because it
+describes *this* engine's copy: which commit, which rules version, what to build.
+It still has exactly one writer — `tools/write_provenance.sh` from the
+specification checkout, called by `.github/workflows/rules-sync.yml` — because it
+had two and they drifted, and a test now fails if it names a version or a commit
+`rules.lock` does not. Editing it by hand puts the second writer back.
+
+## The engine fetches the release
+
+`.github/workflows/rules-sync.yml` is `engine.md` section 11.4: on a daily clock
+and on demand it compares the newest `spec` release to `rules.lock`, and when
+they differ it downloads the artefacts, verifies `SHA256SUMS` and then the
+provenance attestation, writes `spec/`, `rules.lock` and `spec/PROVENANCE.md`,
+regenerates the emitted code, runs `./scripts/verify.sh` and opens a pull
+request. Nothing reaches the working tree before the attestation verifies.
+
+The pull request is opened green or red. **A red one is never merged to unblock
+the chain**: it is corrected, or the release is refused with the reason written
+down. Red means the release brought something this engine does not yet do, which
+is exactly the case that wanted a human.
 
 Nothing here compares rules versions for order — `PATCH` in `YYYY.MM.PATCH` is a
 counter within a month with no upper bound, so `2026.08.32` legitimately follows
