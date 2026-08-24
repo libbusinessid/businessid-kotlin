@@ -15,6 +15,19 @@ description = "Offline canonicalization, format and checksum validation of busin
 kotlin {
     // Every public declaration states its visibility and its return type.
     explicitApi()
+
+    // The published library is compiled by the current Kotlin but speaks an
+    // older one. A Kotlin compiler reads metadata up to one minor version above
+    // its own, so metadata 2.2 is what a consumer on Kotlin 2.1 or later can
+    // read — and the built-in Kotlin of the Android Gradle plugin is 2.2 today.
+    // Compiling at the newest version instead would make the library unusable on
+    // Android, which is half of what this release announces.
+    coreLibrariesVersion = libs.versions.kotlinCompatibility.get()
+
+    compilerOptions {
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
+    }
 }
 
 // The published library has no dependency: it decodes nothing, downloads
@@ -29,7 +42,7 @@ java {
     withSourcesJar()
 }
 
-val dokkaJavadocJar by tasks.registering(Jar::class) {
+val dokkaJavadocJar = tasks.register<Jar>("dokkaJavadocJar") {
     archiveClassifier.set("javadoc")
     from(tasks.named("dokkaGeneratePublicationHtml"))
 }

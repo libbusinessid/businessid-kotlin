@@ -11,3 +11,4 @@ local.properties
 
 # Jazzer grows this while fuzzing. It is a cache, not a reviewed seed corpus.
 .cifuzz-corpus/
+local.properties

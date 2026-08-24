@@ -16,7 +16,7 @@ dependencies {
 // JMH's annotation processor is driven over compiled bytecode rather than
 // through kapt: one fewer Kotlin compiler plugin in the build, and the same
 // generated harness.
-val jmhGeneratorClasspath: Configuration by configurations.creating
+val jmhGeneratorClasspath: Configuration = configurations.create("jmhGeneratorClasspath")
 
 dependencies {
     jmhGeneratorClasspath(libs.jmh.core)
