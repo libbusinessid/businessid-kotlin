@@ -111,6 +111,12 @@ tasks.register<JavaExec>("ktlintCheck") {
     args(ktlintSources)
 }
 
+// Wired into `check`, so a local build fails on the same finding CI would raise.
+// It was not, and CI found three that the local build had said nothing about.
+tasks.named("check") {
+    dependsOn("ktlintCheck")
+}
+
 tasks.register<JavaExec>("ktlintFormat") {
     group = "formatting"
     description = "Applies ktlint fixes to the hand written sources."
@@ -269,26 +275,26 @@ val publishForConsumers = tasks.register("publishForConsumers") {
     dependsOn(":businessid:publishMavenPublicationToLocalStagingRepository")
 }
 
-fun consumerTask(name: String, directory: String, arguments: List<String>) =
-    tasks.register<Exec>(name) {
-        group = "verification"
-        description = "Builds the $directory consumer project against the published artefact."
-        dependsOn(publishForConsumers)
-        workingDir = layout.projectDirectory.dir("consumer/$directory").asFile
-        val wrapper = layout.projectDirectory.file("gradlew").asFile.absolutePath
-        val repository = project(":businessid").layout.buildDirectory
-            .dir("staging-repository").get().asFile.toURI().toString()
-        commandLine(
-            listOf(
-                wrapper,
-                "--project-dir", workingDir.absolutePath,
-                "-Pbusinessid.version=${project.version}",
-                "-Pbusinessid.repository=$repository",
-                "--no-daemon",
-                "--console=plain",
-            ) + arguments,
-        )
-    }
+fun consumerTask(name: String, directory: String, arguments: List<String>) = tasks.register<Exec>(name) {
+    group = "verification"
+    description = "Builds the $directory consumer project against the published artefact."
+    dependsOn(publishForConsumers)
+    workingDir = layout.projectDirectory.dir("consumer/$directory").asFile
+    val wrapper = layout.projectDirectory.file("gradlew").asFile.absolutePath
+    val repository = project(":businessid").layout.buildDirectory
+        .dir("staging-repository").get().asFile.toURI().toString()
+    commandLine(
+        listOf(
+            wrapper,
+            "--project-dir",
+            workingDir.absolutePath,
+            "-Pbusinessid.version=${project.version}",
+            "-Pbusinessid.repository=$repository",
+            "--no-daemon",
+            "--console=plain",
+        ) + arguments,
+    )
+}
 
 val consumerJvm = consumerTask("consumerJvmTest", "jvm", listOf("build", "run"))
 

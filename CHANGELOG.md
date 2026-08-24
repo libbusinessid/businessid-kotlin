@@ -26,10 +26,13 @@ independently.
 
 - The shared conformance runner, pinned to the commit `rules.lock` records,
   reports 666 of 666 cases matched, 0 differed, against rules `2026.08.26`.
-- Coverage of hand-written code: 99.21 % of lines, 94.41 % of branches. Coverage
-  of the emitted rules under the corpus: 91.03 % of lines, 75.50 % of branches,
+- Coverage of hand-written code: 99.01 % of lines, 92.64 % of branches. Coverage
+  of the emitted rules under the corpus: 88.58 % of lines, 68.61 % of branches,
   reported apart and never gated.
-- The published jar holds 122 KB of classes, no `.binpb`, no Protobuf class, and
+- Mutation testing scores 90.4 % over the runtime primitives and the pipeline,
+  807 of 893 mutants killed. It found two real gaps, both closed: a sentinel
+  compared as an ordering, and neither bound of the dispatch trim set tested.
+- The published jar holds 129 KB of classes, no `.binpb`, no Protobuf class, and
   no reference to a network or file system API.
 - The published ruleset expands to 3069 operation instances, the figure `ir.md`
   section 2 states.

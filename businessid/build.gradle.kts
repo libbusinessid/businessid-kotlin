@@ -151,3 +151,70 @@ tasks.register("auditPublishedDependencies") {
 tasks.named("check") {
     dependsOn("auditPublishedDependencies")
 }
+
+// ---------------------------------------------------------------------------
+// Mutation testing.
+//
+// Pitest is driven from its command line rather than through its Gradle plugin:
+// the plugin reads `reporting.baseDir`, which Gradle 9 removed, so applying it
+// fails before it runs anything.
+//
+// It is aimed where engine-kotlin.md aims it: the runtime primitives and the
+// pipeline, where an off-by-one in a comparison or a flipped bound is a wrong
+// verdict rather than a compile error. The emitted rules are left out —
+// mutating a table produced from the ruleset measures the corpus again.
+// ---------------------------------------------------------------------------
+
+val pitestClasspath: Configuration = configurations.create("pitestClasspath")
+
+dependencies {
+    pitestClasspath(libs.pitest.command.line)
+    pitestClasspath(libs.pitest.entry)
+    pitestClasspath(libs.pitest.junit5)
+    pitestClasspath(libs.junit.jupiter)
+    pitestClasspath(libs.junit.platform.launcher)
+}
+
+tasks.register<JavaExec>("mutationTest") {
+    group = "verification"
+    description = "Runs Pitest over the runtime primitives and the pipeline."
+    // The suite has to be green under Pitest's own JVM, which means it gets the
+    // same system properties the test task sets.
+    dependsOn(tasks.named("testClasses"), tasks.jar, tasks.named("generatePomFileForMavenPublication"))
+    mainClass.set("org.pitest.mutationtest.commandline.MutationCoverageReport")
+    val main = sourceSets.main.get()
+    val test = sourceSets.test.get()
+    classpath = pitestClasspath + test.runtimeClasspath
+    val reportDir = layout.buildDirectory.dir("reports/pitest").get().asFile
+    val sources = main.kotlin.srcDirs.filter { it.isDirectory }.joinToString(",") { it.absolutePath }
+    val classes = main.output.classesDirs.joinToString(",") { it.absolutePath }
+    val runtime = test.runtimeClasspath.files.map { it.absolutePath }
+    val jvmProperties = listOf(
+        "-Dbusinessid.spec.dir=" + rootProject.layout.projectDirectory.dir("spec").asFile.absolutePath,
+        "-Dbusinessid.project.version=" + project.version,
+        "-Dbusinessid.test.classes=" + layout.buildDirectory.dir("classes/kotlin/test").get().asFile.absolutePath,
+        "-Dbusinessid.jar=" + tasks.jar.get().archiveFile.get().asFile.absolutePath,
+        "-Dbusinessid.pom=" +
+            layout.buildDirectory.file("publications/maven/pom-default.xml").get().asFile.absolutePath,
+        "-Duser.language=tr",
+        "-Duser.country=TR",
+        "-Dfile.encoding=UTF-8",
+    ).joinToString(",")
+    args(
+        "--reportDir", reportDir.absolutePath,
+        "--targetClasses", "io.libbusinessid.runtime.*,io.libbusinessid.internal.*",
+        // The test classes share the package of the primitives they exercise,
+        // and mutating a test measures nothing.
+        "--excludedClasses", "io.libbusinessid.generated.*,*Test,*Test$*,io.libbusinessid.runtime.ViewsKt",
+        "--targetTests", "io.libbusinessid.*",
+        "--excludedTestClasses", "io.libbusinessid.fuzz.*,io.libbusinessid.coverage.*",
+        "--sourceDirs", sources,
+        "--classPath", (runtime + classes).joinToString(","),
+        "--mutators", "STRONGER",
+        "--outputFormats", "HTML,XML",
+        "--timestampedReports", "false",
+        "--threads", Runtime.getRuntime().availableProcessors().toString(),
+        "--verbosity", "QUIET",
+        "--jvmArgs", jvmProperties,
+    )
+}

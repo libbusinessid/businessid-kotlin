@@ -26,14 +26,12 @@ tasks.test {
     useJUnitPlatform()
 }
 
-/**
- * What a caller actually inherits.
- *
- * The library declares no dependency of its own, so the runtime classpath of a
- * project that takes it holds the library, the Kotlin standard library, and the
- * annotations artefact the standard library itself brings. Anything else here
- * would be something the library imposed without saying so.
- */
+// What a caller actually inherits.
+//
+// The library declares no dependency of its own, so the runtime classpath of a
+// project that takes it holds the library, the Kotlin standard library, and the
+// annotations artefact the standard library itself brings. Anything else here
+// would be something the library imposed without saying so.
 tasks.register("verifyDependencies") {
     val resolved = configurations.named("runtimeClasspath").map { classpath ->
         classpath.incoming.resolutionResult.allComponents
