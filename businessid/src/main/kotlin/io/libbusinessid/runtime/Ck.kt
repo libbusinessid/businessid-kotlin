@@ -102,6 +102,12 @@ internal object Ck {
     /**
      * `any_check(rule...)`: valid as soon as one operand is valid, else the
      * first unsupported outcome, else the first invalid one.
+     *
+     * The operands arrive already evaluated. No IR operation has a side effect,
+     * an out of range view answers absence rather than raising, and the load
+     * checks prove no emitted arithmetic can overflow — so evaluating them all
+     * and stopping at the first valid one give the same answer. What the shape
+     * costs is work, never a different verdict.
      */
     @JvmStatic
     internal fun anyCheck(branches: Array<ChecksumOutcome>): ChecksumOutcome {
