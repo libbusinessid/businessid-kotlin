@@ -245,6 +245,15 @@ object KitchenSink {
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) { addAllValues(listOf("P", "Z")) }
                 .addInputNodes(value),
         )
+        // A membership list long enough to be packed into string constants
+        // rather than walked, of three different shapes, holding every character
+        // the emitter has to escape and a pair whose code point order and UTF-16
+        // order disagree.
+        val membership = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
+                addAllValues(MEMBERSHIP)
+            }.addInputNodes(value),
+        )
         val charAtIn = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN) {
                 index = 0
@@ -254,6 +263,14 @@ object KitchenSink {
         )
         val contains = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_CONTAINS) { text = "Z" }.addInputNodes(value),
+        )
+        // A constant long enough that its code points cannot be emitted as one
+        // array literal: past a few hundred elements the enclosing method
+        // approaches the sixty-four kilobyte limit the JVM caps it at.
+        val longConstant = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_CONTAINS) {
+                text = LONG_CONSTANT
+            }.addInputNodes(value),
         )
         val profileIs = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PROFILE_IS) { text = "strict_current" },
@@ -288,7 +305,9 @@ object KitchenSink {
                 .addInputNodes(lengthBetween).addInputNodes(alnum).addInputNodes(charset)
                 .addInputNodes(equal).addInputNodes(upper).addInputNodes(startsWith)
                 .addInputNodes(endsWith).addInputNodes(prefixIn).addInputNodes(charAtIn)
-                .addInputNodes(contains).addInputNodes(any).addInputNodes(joinedPresent)
+                .addInputNodes(
+                    contains,
+                ).addInputNodes(longConstant).addInputNodes(membership).addInputNodes(any).addInputNodes(joinedPresent)
                 .addInputNodes(strippedPresent).addInputNodes(afterPresent).addInputNodes(tailPresent),
         )
         val requireShape = n.add(
@@ -386,7 +405,8 @@ object KitchenSink {
         )
         val remainder = n.add(
             integer(Rules.IntegerOpKind.INTEGER_OP_KIND_REMAINDER_MAP) {
-                addAllRemainderValues(listOf(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 0L, 1L))
+                // Longer than one array literal may hold, for the same reason.
+                addAllRemainderValues(List(LONG_TABLE) { (it % 10).toLong() })
             }.addInputNodes(complement),
         )
 
@@ -501,6 +521,50 @@ object KitchenSink {
         .setLicenseOrTerms("Apache-2.0")
         .setTier(tier)
         .build()
+
+    /** Past [MAX_ELEMENTS_PER_METHOD] in the emitter, so the literal is split. */
+    private const val LONG_TABLE = 600
+
+    /** Six hundred code points, for the same reason. */
+    private val LONG_CONSTANT: String = (0 until 600).joinToString("") { "abcdefghij"[it % 10].toString() }
+
+    /**
+     * A membership list of three shapes.
+     *
+     * Twenty entries of two code points and two UTF-16 units, holding the four
+     * characters a Kotlin string literal cannot carry raw; two of one code point
+     * and two units, which only a supplementary character gives; and two of two
+     * code points and three units, one BMP and one supplementary in either
+     * order — the pair whose code point order and UTF-16 order disagree.
+     *
+     * Sorted by UTF-8 bytes and deduplicated, as check 12 requires of the field.
+     */
+    private val MEMBERSHIP: List<String> = buildList {
+        // Two units, two code points. U+0007, U+0022, U+0024 and U+005C are the
+        // four the emitter escapes; the rest fill the list past the threshold
+        // above which it is packed rather than walked.
+        add("\u0007A")
+        add("\"A")
+        add("${'$'}A")
+        add("\\A")
+        for (c in 'a'..'p') add("" + c + "A")
+        // One code point, two units.
+        add("\uD800\uDC00")
+        add("\uD800\uDC01")
+        // Two code points, three units, in both arrangements.
+        add("\uD800\uDC02Z")
+        add("\uFFFD\uD800\uDC03")
+    }.sortedWith { a, b -> compareUtf8Bytes(a, b) }
+
+    private fun compareUtf8Bytes(left: String, right: String): Int {
+        val a = left.toByteArray(Charsets.UTF_8)
+        val b = right.toByteArray(Charsets.UTF_8)
+        for (i in 0 until minOf(a.size, b.size)) {
+            val order = (a[i].toInt() and 0xFF) - (b[i].toInt() and 0xFF)
+            if (order != 0) return order
+        }
+        return a.size - b.size
+    }
 
     /** The ruleset. Every check accepts it, and every opcode appears in it. */
     fun bundle(): Rules.RuleBundle = Rules.RuleBundle.newBuilder()

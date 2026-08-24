@@ -241,6 +241,111 @@ class KitchenSinkTest {
     }
 
     @Test
+    fun `a long membership list is packed into sorted string constants, one per shape`() {
+        val formats = emitted.getValue("Formats.kt")
+        val constants = emitted.getValue("Constants.kt")
+
+        // Three shapes: (2 code points, 2 units), (1, 2) and (2, 3).
+        val calls = Regex("""Pred\.prefixInPacked\([^,]+, (K\d+), (\d+), (\d+)\)""")
+            .findAll(formats)
+            .map { Triple(it.groupValues[1], it.groupValues[2].toInt(), it.groupValues[3].toInt()) }
+            .toList()
+        assertEquals(
+            listOf(1 to 2, 2 to 2, 2 to 3),
+            calls.map { it.second to it.third }.sortedWith(compareBy({ it.first }, { it.second })),
+            "one call per shape, ordered by shape",
+        )
+
+        // Every packed constant holds a whole number of entries, and its entries
+        // are in the code point order the binary search compares.
+        for ((name, codePoints, stride) in calls) {
+            val literal = Regex("""internal const val $name: String = "((?:[^"\\]|\\.)*)"""")
+                .find(constants)
+                ?.groupValues?.get(1)
+                ?: error("$name is not a string constant")
+            val decoded = unescape(literal)
+            assertEquals(0, decoded.length % stride, "$name is not a whole number of entries")
+            val entries = decoded.chunked(stride)
+            assertEquals(
+                entries.sortedWith { a, b -> compareCodePoints(a, b) },
+                entries,
+                "$name is not sorted by code point",
+            )
+            for (entry in entries) {
+                assertEquals(codePoints, entry.codePointCount(0, entry.length), "an entry of $name")
+                assertEquals(stride, entry.length, "an entry of $name")
+            }
+        }
+    }
+
+    @Test
+    fun `a table too long for one array literal is split across methods`() {
+        // Every element of an array literal costs bytecode in the enclosing
+        // method, and a file level `val` is initialised in the class
+        // initialiser, which the JVM caps at sixty-four kilobytes. A ruleset that
+        // grew by two thousand entries is what found that; splitting keeps the
+        // library compiling whatever a future one carries.
+        val constants = emitted.getValue("Constants.kt")
+        val chunks = Regex("""private fun k\d+p(\d+)\(\)""").findAll(constants).toList()
+        assertTrue(chunks.isNotEmpty(), "no literal was split")
+        // Each split constant is the concatenation of its parts.
+        val joins = Regex("""internal val (K\d+): \S+ = (k\d+p\d+\(\)(?: \+ k\d+p\d+\(\))+)""")
+            .findAll(constants)
+            .toList()
+        assertTrue(joins.isNotEmpty(), "a split literal is never put back together")
+        for (join in joins) {
+            val parts = Regex("""k\d+p(\d+)\(\)""").findAll(join.groupValues[2])
+                .map { it.groupValues[1].toInt() }
+                .toList()
+            assertEquals(parts.indices.toList(), parts, "the parts of ${join.groupValues[1]} are out of order")
+        }
+    }
+
+    @Test
+    fun `a packed membership list escapes the ruleset data it carries`() {
+        // The packed form turns membership entries into string literals, which
+        // the array of arrays it replaced never did. Whatever a register
+        // publishes has to survive that as data.
+        val constants = emitted.getValue("Constants.kt")
+        assertTrue("""\u0007""" in constants, "a control character is spelt, not carried")
+        assertTrue("""\"""" in constants, "a quote is escaped")
+        assertTrue("""\\""" in constants, "a backslash is escaped")
+        assertTrue("""\${'$'}""" in constants, "a dollar is escaped")
+    }
+
+    private fun unescape(literal: String): String = buildString {
+        var i = 0
+        while (i < literal.length) {
+            val c = literal[i]
+            if (c != '\\') {
+                append(c)
+                i++
+                continue
+            }
+            when (val next = literal[i + 1]) {
+                'u' -> {
+                    append(literal.substring(i + 2, i + 6).toInt(16).toChar())
+                    i += 6
+                }
+
+                else -> {
+                    append(next)
+                    i += 2
+                }
+            }
+        }
+    }
+
+    private fun compareCodePoints(left: String, right: String): Int {
+        val a = left.codePoints().toArray()
+        val b = right.codePoints().toArray()
+        for (i in 0 until minOf(a.size, b.size)) {
+            if (a[i] != b[i]) return a[i] - b[i]
+        }
+        return a.size - b.size
+    }
+
+    @Test
     fun `a choose whose first branch always applies emits no condition`() {
         val checksums = emitted.getValue("Checksums.kt")
         // The unconditional branch closes the chain, so nothing after it is

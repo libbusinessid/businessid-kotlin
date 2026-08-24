@@ -1194,8 +1194,17 @@ internal class Loader private constructor(private val bytes: ByteArray, private 
                             invalidRuleset(16, "$where is a when branch read by something other than a choose")
                         }
                     }
-                    if (index !in chooseOperands && index == p.rootNode) {
-                        invalidRuleset(16, "$where is a when branch used as the program root")
+                    // Accepted only as a direct operand of a choose, which a
+                    // branch nothing reads is not. Looking at a node's parents
+                    // alone misses it: a node with no parent has none to look
+                    // at, and section 2 lets an unreachable node exist.
+                    //
+                    // The program root is not part of this scan. `root_node` is
+                    // a reference and not an operand, and a program rooted in a
+                    // when branch is already refused above, by the rule that
+                    // owns it and with its own message.
+                    if (index !in chooseOperands) {
+                        invalidRuleset(16, "$where is a when branch no choose reads")
                     }
                 }
                 if (ProgramRole.PRE_CANONICALIZATION in programRoles && !Nodes.allowedInPreCanonicalization(node)) {

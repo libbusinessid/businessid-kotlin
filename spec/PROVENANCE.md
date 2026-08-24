@@ -1,8 +1,8 @@
 # Where these files come from, and what to build
 
 Copied from `github.com/libbusinessid/spec` at commit
-`ee15865110c2a1bb9707b631059293ac82af1101`, rules version
-`2026.08.26`, stability `alpha`.
+`3f68173b64388e6e5071534f3d9198d29a524d20`, rules version
+`2026.08.31`, stability `alpha`.
 
 ## What this engine is — and is not
 
@@ -20,7 +20,7 @@ specification stays agnostic and hosts no target language. Write it in whatever
 language suits you, as long as it can read the bundle.
 
 The reasoning, if you want it: all business logic of the 94 current
-definitions is 2376 IR nodes using 52 of the 63 opcodes. An interpreter costs
+definitions is 2386 IR nodes using 52 of the 63 opcodes. An interpreter costs
 roughly three thousand lines of execution machinery per language to run that,
 and buys the ability to swap rules without recompiling — which this project
 does not use, since section 3 excludes dynamic rule downloading and section 11

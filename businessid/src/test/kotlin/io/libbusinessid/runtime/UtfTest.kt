@@ -37,6 +37,53 @@ class UtfTest {
     }
 
     @Test
+    fun `it agrees with the encoder on ill formed strings too, which is the choice ir_md asks be stated`() {
+        // `ir.md` section 6 step 1 lets an engine either count what its own
+        // encoder produces or refuse the input before measuring it. This engine
+        // counts, so the count is not a convention but an invariant: equal to
+        // `toByteArray(UTF_8).size` for every string a Kotlin `String` can hold.
+        val samples = listOf(
+            highSurrogate,
+            lowSurrogate,
+            highSurrogate + highSurrogate,
+            lowSurrogate + lowSurrogate,
+            lowSurrogate + highSurrogate,
+            highSurrogate + "A",
+            highSurrogate + "😀" + lowSurrogate,
+            "ab" + highSurrogate + "cd",
+            highSurrogate + "é",
+            highSurrogate.repeat(3),
+        )
+        for (s in samples) {
+            assertEquals(
+                s.toByteArray(Charsets.UTF_8).size,
+                Utf.utf8Length(s),
+                "for ${s.map { "U+%04X".format(it.code) }}",
+            )
+        }
+    }
+
+    @Test
+    fun `it agrees with the encoder on any string at all`() {
+        // The same statement over generated input rather than chosen examples,
+        // with surrogates drawn often enough that ill formed strings dominate.
+        val random = java.util.Random(20260831)
+        val alphabet = charArrayOf(
+            'a', 'Z', '0', ' ', 'é', '€', '\uD83D', '\uDE00', '\uD800', '\uDFFF', '\u0000', '\u07FF',
+        )
+        repeat(20_000) {
+            val out = StringBuilder()
+            repeat(random.nextInt(12)) { out.append(alphabet[random.nextInt(alphabet.size)]) }
+            val s = out.toString()
+            assertEquals(
+                s.toByteArray(Charsets.UTF_8).size,
+                Utf.utf8Length(s),
+                "for ${s.map { "U+%04X".format(it.code) }}",
+            )
+        }
+    }
+
+    @Test
     fun `an unpaired surrogate is ill formed, in both orders`() {
         assertTrue(Utf.isWellFormed(""))
         assertTrue(Utf.isWellFormed("abc"))

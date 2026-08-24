@@ -3,6 +3,7 @@
 
 package io.libbusinessid.runtime
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -100,6 +101,119 @@ class PredTest {
         assertFalse(Pred.contains(view("abc"), cp("FR")))
         assertTrue(Pred.prefixIn(view("BE0"), arrayOf(cp("FR"), cp("BE"))))
         assertFalse(Pred.prefixIn(view("DE0"), arrayOf(cp("FR"), cp("BE"))))
+    }
+
+    @Test
+    fun `prefix_in over a packed group finds every member and no other`() {
+        // A membership list a register publishes runs to thousands of entries,
+        // packed end to end and read by binary search. Every entry must be
+        // found, at both ends and in the middle, and nothing between them.
+        val entries = listOf("AA", "AB", "BC", "MM", "XY", "ZZ")
+        val packed = entries.joinToString("")
+        for (entry in entries) {
+            assertTrue(Pred.prefixInPacked(view(entry), packed, 2, 2), entry)
+            assertTrue(Pred.prefixInPacked(view(entry + "rest"), packed, 2, 2), "$entry with a tail")
+        }
+        for (absent in listOf("AC", "A0", "BB", "BD", "LL", "NN", "XX", "XZ", "ZY", "00", "zz")) {
+            assertFalse(Pred.prefixInPacked(view(absent), packed, 2, 2), absent)
+        }
+    }
+
+    @Test
+    fun `prefix_in over a packed group is false on absent and on a value too short`() {
+        val packed = "AABBCC"
+        assertFalse(Pred.prefixInPacked(null, packed, 2, 2))
+        assertFalse(Pred.prefixInPacked(view(""), packed, 2, 2))
+        assertFalse(Pred.prefixInPacked(view("A"), packed, 2, 2))
+        assertTrue(Pred.prefixInPacked(view("AA"), packed, 2, 2))
+    }
+
+    @Test
+    fun `a packed group of one entry is searched correctly`() {
+        assertTrue(Pred.prefixInPacked(view("AB"), "AB", 2, 2))
+        assertFalse(Pred.prefixInPacked(view("AA"), "AB", 2, 2))
+        assertFalse(Pred.prefixInPacked(view("AC"), "AB", 2, 2))
+    }
+
+    @Test
+    fun `a packed group whose entries reach outside the Basic Multilingual Plane`() {
+        // One code point, two UTF-16 units. The search compares code points, so
+        // the stride and the code point count part company here.
+        val entries = listOf("\uD800\uDC00", "\uD800\uDC01", "\uD83D\uDE00")
+        val packed = entries.joinToString("")
+        for (entry in entries) {
+            assertTrue(Pred.prefixInPacked(view(entry), packed, 1, 2), entry)
+        }
+        assertFalse(Pred.prefixInPacked(view("\uD800\uDC02"), packed, 1, 2))
+        assertFalse(Pred.prefixInPacked(view("A"), packed, 1, 2))
+    }
+
+    @Test
+    fun `a packed group mixing a BMP and a supplementary code point per entry`() {
+        // Two code points, three units. The search reads the group in code point
+        // order, which the generator guarantees: U+FFFD comes before U+10002.
+        // Sorted by UTF-16 unit the two would swap, and the search would walk
+        // past a member and answer that it is not one — which is what packing
+        // them the other way round below demonstrates.
+        val entries = listOf("\uFFFD\uD800\uDC03", "\uD800\uDC02Z")
+        val packed = entries.joinToString("")
+        assertTrue(Pred.prefixInPacked(view("\uFFFD\uD800\uDC03"), packed, 2, 3))
+        assertTrue(Pred.prefixInPacked(view("\uD800\uDC02Z"), packed, 2, 3))
+        assertFalse(Pred.prefixInPacked(view("\uFFFD\uD800\uDC04"), packed, 2, 3))
+
+        // The same two entries in UTF-16 order, which is what Kotlin's own
+        // `sorted()` produces. A member becomes unfindable.
+        val misordered = entries.sorted().joinToString("")
+        assertFalse(
+            Pred.prefixInPacked(view("\uFFFD\uD800\uDC03"), misordered, 2, 3),
+            "the ordering the generator has to get right",
+        )
+    }
+
+    @Test
+    fun `the packed search answers rather than throws when the shape disagrees`() {
+        // The generator groups a list so that every entry holds exactly the
+        // declared number of code points and units, and `KitchenSinkTest`
+        // asserts that over what it emits. These are the guards that make the
+        // search total anyway: told a stride the content does not have, it
+        // answers, and it answers false rather than matching by accident.
+        val packed = "ABCDEF"
+
+        // Entries shorter than the declared code point length: each block runs
+        // out before the probe does.
+        assertFalse(Pred.prefixInPacked(view("ABC"), packed, 3, 2))
+        assertFalse(Pred.prefixInPacked(view("AB"), packed, 3, 2))
+
+        // Entries longer than the probe consumes: each block has code points
+        // left over after the comparison.
+        assertFalse(Pred.prefixInPacked(view("A"), packed, 1, 3))
+        assertFalse(Pred.prefixInPacked(view("D"), packed, 1, 3))
+
+        // And a lone high surrogate at the end of a block, which no entry the
+        // generator packs can hold.
+        assertFalse(Pred.prefixInPacked(view("A"), "A\uD800", 1, 2))
+    }
+
+    @Test
+    fun `the packed search agrees with the walk it replaced, over every pair`() {
+        // The two forms answer the same question; the packed one only answers it
+        // faster. Stated over every two character value there is.
+        val alphabet = "ABMXZ0"
+        val entries = alphabet.flatMap { a -> alphabet.map { b -> "" + a + b } }
+            .filterIndexed { i, _ -> i % 3 == 0 }
+            .sorted()
+        val packed = entries.joinToString("")
+        val arrays = entries.map { cp(it) }.toTypedArray()
+        for (a in alphabet) {
+            for (b in alphabet) {
+                val probe = view("" + a + b + "tail")
+                assertEquals(
+                    Pred.prefixIn(probe, arrays),
+                    Pred.prefixInPacked(probe, packed, 2, 2),
+                    "for $a$b",
+                )
+            }
+        }
     }
 
     @Test

@@ -85,7 +85,13 @@ class ReadmeTest {
         val info = engine.rulesInfo()
         assertTrue("rules ${info.rulesVersion}, format version ${info.formatVersion}" in readme)
         assertTrue("${info.supportedKinds.size} kinds" in readme)
-        assertTrue("666 of 666 cases matched" in readme)
+        // Counted rather than repeated: the corpus is one reviewed case per
+        // line, and a resync moves the number without touching this test.
+        val cases = File(System.getProperty("businessid.spec.dir"), "businessid-conformance.jsonl")
+            .readLines()
+            .count { it.isNotBlank() }
+        assertTrue("$cases of $cases cases matched" in readme, "the README states another conformance count")
+        assertTrue("$cases cases, $cases matched, 0 differed" in readme)
     }
 
     @Test

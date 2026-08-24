@@ -54,7 +54,7 @@ class PublishedRulesetTest {
         assertEquals(94, loaded.proto.identifiersCount, "identifier definitions")
         assertEquals(250, loaded.proto.programsCount, "programs")
         assertEquals(37, loaded.proto.dispatchersCount, "dispatchers")
-        assertEquals(2376, loaded.proto.programsList.sumOf { it.nodesCount }, "IR nodes")
+        assertEquals(2386, loaded.proto.programsList.sumOf { it.nodesCount }, "IR nodes")
         // Check 23 makes this an identity: every definition is referenced by
         // exactly one target, and every target names an existing definition.
         assertEquals(94, loaded.proto.targets(), "dispatch targets")
@@ -109,8 +109,8 @@ class PublishedRulesetTest {
             }
             everyCapture += instances(p, naive)
         }
-        assertEquals(3069L, reachableRoots)
-        assertEquals(3204L, everyCapture, "the reading ir.md section 2 warns about")
+        assertEquals(3094L, reachableRoots)
+        assertEquals(3229L, everyCapture, "the reading ir.md section 2 warns about")
         assertTrue(reachableRoots < Limits.MAX_STEPS, "the ruleset fits in the budget")
     }
 

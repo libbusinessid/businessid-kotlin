@@ -69,7 +69,7 @@ class JavaApiTest {
     @Test
     void readsTheMetadata() {
         RulesInfo info = engine.rulesInfo();
-        assertEquals("2026.08.26", info.getRulesVersion());
+        assertEquals(System.getProperty("businessid.rules.version"), info.getRulesVersion());
         assertEquals(1, info.getFormatVersion());
         assertFalse(engine.capabilities().isEmpty());
     }

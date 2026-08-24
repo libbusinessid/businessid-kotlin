@@ -1,4 +1,4 @@
-// Generated from businessid-rules.binpb 2026.08.26. Do not edit by hand:
+// Generated from businessid-rules.binpb 2026.08.31. Do not edit by hand:
 // run `./gradlew generateEngine`. `./gradlew checkGenerated` fails when this
 // file and the pinned bundle disagree.
 //

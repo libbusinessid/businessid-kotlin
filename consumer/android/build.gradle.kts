@@ -38,3 +38,9 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
 }
+
+tasks.withType<Test>().configureEach {
+    // The version of the ruleset the engine build compiled in, so a resync does
+    // not have to be repeated by hand in a second build.
+    systemProperty("businessid.rules.version", providers.gradleProperty("businessid.rules").get())
+}

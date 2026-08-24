@@ -5,6 +5,7 @@ package io.libbusinessid.generator
 
 import libbusinessid.ir.v1.Rules
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -437,6 +438,35 @@ class LoaderRefusalTest {
         },
         Mutation("a format program not rooted at an assertion sequence", 16) {
             onProgram(3) { rootNode = 2 }
+        },
+        Mutation("a when branch no choose reads", 16) {
+            // Reachable from no root, so section 2 lets it exist and check 14
+            // does not count it. It is still not a direct operand of a choose,
+            // which is the only place `WHEN` is accepted, and the reference
+            // loader enforced that by looking at each node's parents — a node
+            // with no parent has none to look at.
+            onProgram(6) {
+                addNodes(
+                    Rules.Node.newBuilder()
+                        .setOutputType(Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME)
+                        .addInputNodes(
+                            (0 until nodesCount).first {
+                                getNodes(it).outputType == Rules.ValueType.VALUE_TYPE_BOOLEAN
+                            },
+                        )
+                        .addInputNodes(
+                            (0 until nodesCount).first {
+                                getNodes(it).hasChecksumOperation() &&
+                                    getNodes(it).checksumOperation.kind ==
+                                    Rules.ChecksumOpKind.CHECKSUM_OP_KIND_LUHN
+                            },
+                        )
+                        .setChecksumOperation(
+                            Rules.ChecksumOperation.newBuilder()
+                                .setKind(Rules.ChecksumOpKind.CHECKSUM_OP_KIND_WHEN),
+                        ),
+                )
+            }
         },
         Mutation("a checksum program rooted at a when branch", 16) {
             onProgram(6) {
@@ -871,6 +901,42 @@ class LoaderRefusalTest {
     @Test
     fun `the ruleset every mutation starts from is accepted`() {
         Loader.load(KitchenSink.bytes())
+    }
+
+    @Test
+    fun `a when branch as the program root keeps its own rule and its own message`() {
+        // The program root is excluded from the scan for a branch no choose
+        // reads: `root_node` is a reference rather than an operand, and a
+        // program rooted in a when branch is refused by the rule that owns it.
+        // Were the root included, this would be reported by the wrong rule.
+        val rooted = KitchenSink.bundle().toBuilder().apply {
+            onProgram(6) {
+                rootNode = (0 until nodesCount).first {
+                    getNodes(it).hasChecksumOperation() &&
+                        getNodes(it).checksumOperation.kind == Rules.ChecksumOpKind.CHECKSUM_OP_KIND_WHEN
+                }
+            }
+        }
+        val failure = assertFailsWith<RulesetException> { Loader.load(rooted.build().toByteArray()) }
+        assertEquals(16, failure.check)
+        assertEquals(
+            "checksum program 6 roots at a when branch",
+            failure.message,
+            "the root case must not be reported as a branch no choose reads",
+        )
+    }
+
+    @Test
+    fun `a when branch nothing reads is reported as one`() {
+        val orphan = KitchenSink.bundle().toBuilder().apply {
+            mutations().first { it.name == "a when branch no choose reads" }.apply(this)
+        }
+        val failure = assertFailsWith<RulesetException> { Loader.load(orphan.build().toByteArray()) }
+        assertEquals(16, failure.check)
+        assertTrue(
+            failure.message.endsWith("is a when branch no choose reads"),
+            failure.message,
+        )
     }
 
     @TestFactory

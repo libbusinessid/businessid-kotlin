@@ -24,6 +24,9 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    // The version of the ruleset the engine build compiled in, so a resync does
+    // not have to be repeated by hand in a second build.
+    systemProperty("businessid.rules.version", providers.gradleProperty("businessid.rules").get())
 }
 
 // What a caller actually inherits.

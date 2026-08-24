@@ -126,7 +126,7 @@ class EmittedCoverageDriverTest {
     @Test
     fun `every input of the corpus goes through the engine`() {
         val all = cases()
-        assertEquals(666, all.size, "the corpus this build was pinned against")
+        assertEquals(673, all.size, "the corpus this build was pinned against")
         var driven = 0
         for (case in all) {
             // Operation 5 is the ruleset case, which addresses the generator.
@@ -143,7 +143,7 @@ class EmittedCoverageDriverTest {
             }
             driven++
         }
-        assertEquals(631, driven, "the business operations of the corpus")
+        assertEquals(638, driven, "the business operations of the corpus")
     }
 
     @Test
