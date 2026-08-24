@@ -34,6 +34,24 @@ internal object Pipeline {
     /** Safety bound on the raw input, in UTF-8 bytes. */
     const val MAX_INPUT_BYTES: Int = 1024
 
+    /**
+     * What the tables answer when nothing is selected.
+     *
+     * A named sentinel compared for equality, rather than a negative index
+     * compared for order: "no target" is not smaller than target 0, it is a
+     * different thing. Written as an order, a boundary slip would read target 0
+     * as absent — and mutation testing showed that slip surviving, because the
+     * one dispatcher that owns target 0 has a single target and every fallback
+     * converges on it.
+     */
+    const val NO_TARGET: Int = -1
+
+    /** What the kind table answers when no dispatcher owns a token. */
+    const val NO_DISPATCHER: Int = -1
+
+    /** What a result carries when no definition was selected. */
+    const val NO_DEFINITION: Int = -1
+
     private val NOT_RUN_AFTER_UNSUPPORTED =
         StepResult(ValidationLevel.CHECKSUM, StepStatus.NOT_RUN, ReasonCode.NOT_RUN_FORMAT_UNSUPPORTED)
     private val NOT_RUN_AFTER_INVALID =
@@ -139,8 +157,8 @@ internal object Pipeline {
         val profile: ValidationProfile,
         val status: StepStatus,
         val reason: ReasonCode,
-        val definition: Int = -1,
-        val target: Int = -1,
+        val definition: Int = NO_DEFINITION,
+        val target: Int = NO_TARGET,
         val canonicalView: CpView = EMPTY_VIEW,
     )
 
@@ -162,7 +180,7 @@ internal object Pipeline {
 
         // 3. Kind normalisation and dispatcher selection.
         val d = Ruleset.dispatcherOf(kindToken)
-        if (d < 0) {
+        if (d == NO_DISPATCHER) {
             return unresolved(input, kindToken, dispatchProfile, ReasonCode.UNSUPPORTED_KIND)
         }
         val canonicalKind = Ruleset.dispatcherKind(d)
@@ -174,7 +192,7 @@ internal object Pipeline {
 
         // 5. Country normalisation.
         var normalizedCountry: String? = null
-        var countryTarget = -1
+        var countryTarget = NO_TARGET
         val rawCountry = input.countryCode
         if (rawCountry != null) {
             val token = Tokens.asciiUpper(Tokens.asciiTrim(rawCountry))
@@ -192,7 +210,7 @@ internal object Pipeline {
                 }
                 normalizedCountry = Ruleset.countryAlias(d, token)
                 countryTarget = Ruleset.countryTarget(d, normalizedCountry)
-                if (countryTarget < 0 && Ruleset.globalTarget(d) < 0) {
+                if (countryTarget == NO_TARGET && Ruleset.globalTarget(d) == NO_TARGET) {
                     return partial(
                         input,
                         canonicalKind,
@@ -208,7 +226,7 @@ internal object Pipeline {
 
         // 6 and 7. Longest declared prefix, then the proven contradiction.
         val prefixTarget = Ruleset.prefixTarget(d, buffer.view())
-        if (countryTarget >= 0 && prefixTarget >= 0 && countryTarget != prefixTarget) {
+        if (countryTarget != NO_TARGET && prefixTarget != NO_TARGET && countryTarget != prefixTarget) {
             return partial(
                 input,
                 canonicalKind,
@@ -222,10 +240,10 @@ internal object Pipeline {
 
         // 8 and 9. Target selection.
         var target = countryTarget
-        if (target < 0) target = prefixTarget
-        if (target < 0) target = Ruleset.globalTarget(d)
-        if (target < 0) target = Ruleset.unprefixedTarget(d)
-        if (target < 0) {
+        if (target == NO_TARGET) target = prefixTarget
+        if (target == NO_TARGET) target = Ruleset.globalTarget(d)
+        if (target == NO_TARGET) target = Ruleset.unprefixedTarget(d)
+        if (target == NO_TARGET) {
             return partial(
                 input,
                 canonicalKind,

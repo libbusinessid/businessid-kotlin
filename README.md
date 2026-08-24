@@ -253,9 +253,39 @@ the conformance corpus, not the engine, and a threshold there would fail an
 irreproachable engine on a gap in the corpus.
 
 ```text
-hand written   lines  99.21%   branches  94.41%
-emitted        lines  91.03%   branches  75.50%
+hand written   lines  99.01%   branches  92.64%
+emitted        lines  88.58%   branches  68.61%
 ```
+
+The figures come from the test suite alone: the fuzz task is excluded from
+instrumentation, because a number that depended on whether Jazzer happened to
+run, and on which inputs it happened to generate, would not be a measurement.
+
+### Mutation testing
+
+```bash
+./gradlew :businessid:mutationTest
+```
+
+Pitest is aimed at the runtime primitives and the pipeline, where an off-by-one
+in a comparison or a flipped bound is a wrong verdict rather than a compile
+error. It scores **90.4 %** — 807 of 893 mutants killed, against the 80 % that
+`engine.md` section 12.5 recommends. The emitted rules are left out: mutating a
+table produced from the ruleset measures the corpus again.
+
+It found two real gaps, both now closed. The target index was compared with
+`< 0` where `-1` is a sentinel and not an ordering, and a boundary slip survived
+because the one dispatcher owning target 0 has a single target, so every
+fallback converged on it; the comparisons are now `== NO_TARGET`. And neither
+bound of the six code points a dispatch trim removes was exercised anywhere,
+which `TokensTest` now pins on both sides.
+
+The eighty-six survivors fall into three families, each equivalent by
+construction: the fast-path early returns of `CanonBuffer` and `Tokens`, whose
+removal leaves the value identical and only the work larger; the null-check
+intrinsics Kotlin inserts, which are not this project's code; and the hash
+multiplier and a `StringBuilder` capacity, neither of which any contract
+observes.
 
 ## Threads, I/O and the network
 

@@ -106,6 +106,15 @@ tasks.register<Test>("fuzz") {
 // else stays in, including the rules emitted from the bundle, because the split
 // between hand written and emitted is what the gate reads and publishes.
 kover {
+    currentProject {
+        instrumentation {
+            // Coverage is measured from the test suite alone. Letting the fuzz
+            // task contribute would make the figure depend on whether Jazzer
+            // happened to run, and on which inputs it happened to generate.
+            disabledForTestTasks.add("fuzz")
+        }
+    }
+
     reports {
         filters {
             excludes {
