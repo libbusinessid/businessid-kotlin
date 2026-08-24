@@ -23,6 +23,41 @@ internal val CANON_SCOPE = Scope(
 )
 
 /**
+ * The membership entries of one group, checked to be in the order the packed
+ * search reads them, and returned unchanged.
+ *
+ * `ir.md` says the values of `prefix_in` are sorted and deduplicated by the
+ * compiler, and says so precisely so that an engine can search them without
+ * reordering anything. It does not name the order; check 12 does, refusing any
+ * list `compareUtf8` does not find sorted. UTF-8 byte order is code point order,
+ * which is what the packed search compares, so a list that loads is already
+ * arranged for it.
+ *
+ * Sorting here again would be free and would also be a lie: it would hide the
+ * day the compiler, or check 12, stopped agreeing with the search. So this
+ * checks and reports instead.
+ */
+internal fun orderedForSearch(where: String, entries: List<String>): List<String> {
+    for (i in 1 until entries.size) {
+        check(compareByCodePoint(entries[i - 1], entries[i]) < 0) {
+            "$where: membership entries reached the emitter out of code point order, " +
+                "${entries[i - 1]} before ${entries[i]}"
+        }
+    }
+    return entries
+}
+
+internal fun compareByCodePoint(left: String, right: String): Int {
+    val a = Cp.of(left)
+    val b = Cp.of(right)
+    for (i in 0 until minOf(a.size, b.size)) {
+        val order = a[i] - b[i]
+        if (order != 0) return order
+    }
+    return a.size - b.size
+}
+
+/**
  * Turns a validated ruleset into Kotlin.
  *
  * Operands are inlined where the graph reads them more than once, which check 14
@@ -163,18 +198,7 @@ internal class Emitter(private val bundle: LoadedBundle) {
         )
     }
 
-    /** Orders two strings by their code points, not by their UTF-16 units. */
-    private fun compareByCodePoint(left: String, right: String): Int {
-        val a = Cp.of(left)
-        val b = Cp.of(right)
-        for (i in 0 until minOf(a.size, b.size)) {
-            val order = a[i] - b[i]
-            if (order != 0) return order
-        }
-        return a.size - b.size
-    }
-
-    /** One group of equally shaped prefixes, packed end to end and sorted. */
+    /** One group of equally shaped prefixes, packed end to end in the order given. */
     private fun packedPrefixes(values: List<String>): String = pool("packed:" + values.joinToString(" ")) { name ->
         "internal const val $name: String = ${quote(values.joinToString(""))}"
     }
@@ -351,7 +375,7 @@ internal class Emitter(private val bundle: LoadedBundle) {
             // with U+FFFD sorts before a supplementary one by code point and
             // after it by code unit. Packed in that order the binary search
             // would walk past a member and answer that it is not one.
-            val packed = packedPrefixes(entries.sortedWith(::compareByCodePoint))
+            val packed = packedPrefixes(orderedForSearch("prefix_in", entries))
             "Pred.prefixInPacked($value, $packed, $codePoints, $stride)"
         }
         return tests.joinToString(" || ", "(", ")")

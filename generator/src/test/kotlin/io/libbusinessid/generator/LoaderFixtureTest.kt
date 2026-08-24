@@ -4,6 +4,7 @@
 package io.libbusinessid.generator
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
@@ -64,6 +65,11 @@ class LoaderFixtureTest {
         "loader-source-tier-unknown-035" to 17,
         "loader-program-expansion-036" to 14,
         "loader-subject-node-circular-037" to 15,
+        "loader-when-unreferenced-038" to 16,
+        // ir.md section 10 check 13 owns "the declared order of a parameter list
+        // as section 9 states it". Check 12 is parameter presence, and this
+        // engine reported the order there until the list named it.
+        "loader-prefix-in-unsorted-039" to 13,
     )
 
     @TestFactory
@@ -97,6 +103,42 @@ class LoaderFixtureTest {
             SpecFiles.loaderCases.map { it.id }.sorted(),
             "the recorded fixtures and the corpus disagree",
         )
+    }
+
+    /**
+     * The two check 16 fixtures differ by one byte, and must not collapse.
+     *
+     * Decoded rather than taken from their descriptions: both carry the same
+     * four node checksum program with a `WHEN` at index 3 that no node reads,
+     * and they differ only at offset 513 — the `root_node` varint, 3 against 1.
+     * `loader-stray-when-branch-022` therefore roots the program at the branch;
+     * `loader-when-unreferenced-038` roots it elsewhere and leaves the branch
+     * with no parent at all. Both are refused as `invalid_ruleset`, so the
+     * corpus alone cannot tell whether an engine has one rule or two. These
+     * assertions can.
+     */
+    @Test
+    fun `the two check sixteen fixtures are refused by different rules`() {
+        fun refusalOf(id: String): RulesetException {
+            val case = SpecFiles.loaderCases.first { it.id == id }
+            return assertFailsWith { Loader.load(case.rulesPayload.toByteArray()) }
+        }
+
+        val payloads = listOf("loader-stray-when-branch-022", "loader-when-unreferenced-038")
+            .map { id -> SpecFiles.loaderCases.first { it.id == id }.rulesPayload.toByteArray() }
+        assertEquals(payloads[0].size, payloads[1].size, "the two fixtures are the same length")
+        val differing = payloads[0].indices.filter { payloads[0][it] != payloads[1][it] }
+        assertEquals(listOf(513), differing, "the two fixtures differ at one byte, the root_node varint")
+
+        val rooted = refusalOf("loader-stray-when-branch-022")
+        assertEquals(16, rooted.check)
+        assertEquals("checksum program 3 roots at a when branch", rooted.message)
+
+        val orphan = refusalOf("loader-when-unreferenced-038")
+        assertEquals(16, orphan.check)
+        assertEquals("program 3 node 3 is a when branch no choose reads", orphan.message)
+
+        assertNotEquals(rooted.message, orphan.message, "one byte apart, and refused for the same reason")
     }
 
     @Test

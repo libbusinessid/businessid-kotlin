@@ -126,7 +126,14 @@ class EmittedCoverageDriverTest {
     @Test
     fun `every input of the corpus goes through the engine`() {
         val all = cases()
-        assertEquals(673, all.size, "the corpus this build was pinned against")
+        // Counted from the JSONL rather than repeated here: it is one reviewed
+        // case per line and an independent rendering of the same corpus, so it
+        // cross checks the varint walk above instead of merely agreeing with a
+        // number a resync would have to move by hand.
+        val jsonl = File(System.getProperty("businessid.spec.dir"), "businessid-conformance.jsonl")
+            .readLines()
+            .filter { it.isNotBlank() }
+        assertEquals(jsonl.size, all.size, "the binpb and the JSONL disagree on how many cases there are")
         var driven = 0
         for (case in all) {
             // Operation 5 is the ruleset case, which addresses the generator.
@@ -143,7 +150,8 @@ class EmittedCoverageDriverTest {
             }
             driven++
         }
-        assertEquals(638, driven, "the business operations of the corpus")
+        val business = jsonl.count { "\"operation\":\"load_ruleset\"" !in it }
+        assertEquals(business, driven, "the business operations of the corpus")
     }
 
     @Test

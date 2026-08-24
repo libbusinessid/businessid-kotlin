@@ -22,16 +22,65 @@ independently.
 - Maven publication with sources, Dokka documentation, a POM, checksums and
   optional signing.
 
+### Fixed
+
+- The scheduled benchmarks job could never have written its results. JMH resolves
+  a relative `-rff` against the working directory of its own process, which for a
+  `JavaExec` task is the project directory and not the repository root, so
+  `benchmarks/build/jmh.json` aimed at `benchmarks/benchmarks/build/jmh.json`:
+  JMH refused with "Can not touch the result file" before running a single
+  benchmark, and had that directory existed it would have written there while the
+  upload step collected nothing. The result file is now chosen by
+  `benchmarks/build.gradle.kts`, which knows its own build directory, and an
+  absolute path cannot be doubled.
+- The scheduled toolchain job ran `./gradlew build`, which pulls in `check` and so
+  detekt, which cannot run in a daemon JVM newer than the release it was built
+  against. It ran `test coverage assemble` in `ci.yml` for that reason and `build`
+  here. Now both run the same tasks.
+- The scheduled workflow never ran on a pull request, so neither failure could be
+  seen before merging. It now also runs on pull requests that touch it or the
+  benchmarks.
+
 ### Changed
 
-- Compiled against rules `2026.08.31`. Three rules gained membership checks —
+- Compiled against rules `2026.09.1`. The bundle is byte identical to
+  `2026.08.31` apart from the version string across both releases, so nothing
+  emitted moved but the constant that carries it and the jar fell by six bytes.
+  The corpus gained two cases and now stands at 675.
+- `loader-when-unreferenced-038` pins the check 16 rule refusing a `WHEN` branch
+  no `CHOOSE` reads. It differs from `loader-stray-when-branch-022` at one byte,
+  the `root_node` varint, and both expect `invalid_ruleset`, so only a message
+  level assertion can tell the two rules apart. Neutralising that one rule makes
+  the fixture load clean, which is how it was confirmed that nothing earlier
+  refuses it.
+- The declared order of a parameter list is refused at **check 13**, not check
+  12. `ir.md` section 10 gives check 12 the parameters an operation declares and
+  check 13 "the declared order of a parameter list as section 9 states it"; the
+  list named the order at `2026.09.1`, and this engine had been refusing the same
+  bundles under the wrong number. Both `prefix_in` values and `length_in` lengths
+  were already enforced ascending and deduplicated, so the fixture
+  `loader-prefix-in-unsorted-039` was refused before this change — at 12 instead
+  of 13.
+- The emitter no longer sorts a membership list before packing it: it checks the
+  order and reports a list that arrives wrong. `ir.md` guarantees the values of
+  `prefix_in` are sorted and deduplicated by the compiler so an engine can search
+  them without reordering, and the loader already refuses any list `compareUtf8`
+  does not find sorted — an order that coincides with the code point order the
+  packed search compares, measured over 576 pairs including supplementary
+  characters. Sorting again would only have hidden the day that stopped being
+  true.
+- Earlier, against rules `2026.08.31`. Three rules gained membership checks —
   2 566 German court codes, 148 French greffe codes, and the Luxembourg section
   letter — and the ruleset grew from 99 677 to 120 872 bytes.
 - A membership list is emitted as a sorted string constant read by binary search
-  rather than an array of arrays walked from the front. Emitted the old way,
-  2 714 entries overflow the sixty-four kilobyte limit the JVM places on a class
-  initialiser and the library stops compiling. Any array literal the generator
-  emits is now split across methods past five hundred elements.
+  rather than an array of arrays walked from the front, and any array literal the
+  generator emits is split across methods past five hundred elements. Emitted the
+  old way the ruleset's 2 755 membership entries become 2 891 array literals, and
+  they overflow the sixty-four kilobyte limit the JVM places on a class
+  initialiser: `Constants.kt` reaches 99 892 bytes and the library stops
+  compiling. Measured by disabling each mechanism in turn, the splitting alone is
+  what restores compilation; the packing is what takes `Constants.kt` to 23 834
+  bytes and the lookup off a linear walk.
 - `Utf.utf8Length` counts an unpaired surrogate as the one byte the platform
   encoder emits rather than the three its code unit would have taken, which
   `ir.md` section 6 step 1 now names as one of the two answers an engine may give
@@ -43,7 +92,7 @@ independently.
 ### Measured
 
 - The shared conformance runner, pinned to the commit `rules.lock` records,
-  reports 673 of 673 cases matched, 0 differed, against rules `2026.08.31`.
+  reports 674 of 674 cases matched, 0 differed, against rules `2026.09.0`.
 - Coverage of hand-written code: 99.04 % of lines, 93.04 % of branches. Coverage
   of the emitted rules under the corpus: 88.58 % of lines, 68.74 % of branches,
   reported apart and never gated.

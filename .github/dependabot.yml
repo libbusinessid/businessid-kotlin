@@ -24,3 +24,18 @@ updates:
     # The rules bundle is not a dependency: it is pinned by rules.lock and
     # updated by the synchronisation pull request the specification describes.
     open-pull-requests-limit: 5
+    ignore:
+      # kotlinCompatibility in libs.versions.toml is deliberately lower than
+      # kotlin: the first is the metadata version the published library speaks,
+      # the second is the compiler that builds it. A consumer whose Kotlin is a
+      # minor below cannot read newer metadata, and the built-in Kotlin of the
+      # current Android Gradle plugin is 2.2 — so raising this coordinate to
+      # match the compiler makes the library unusable on Android, which the
+      # consumer job catches and nothing before it does.
+      #
+      # Dependabot sees one number to raise and cannot see that the two pins are
+      # different on purpose. Closing its pull request by hand brings it back
+      # with every Kotlin release until someone merges it on a tired day, so the
+      # coordinate is ignored here instead. The compiler itself is a different
+      # coordinate and keeps updating.
+      - dependency-name: "org.jetbrains.kotlin:kotlin-stdlib"
