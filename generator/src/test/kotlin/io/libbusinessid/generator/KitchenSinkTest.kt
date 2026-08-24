@@ -218,4 +218,34 @@ class KitchenSinkTest {
         assertTrue("\"kitchen.digit\"" in emitted.getValue("Checksums.kt"))
         assertTrue("\"kitchen.unpublished\"" in emitted.getValue("Checksums.kt"))
     }
+
+    @Test
+    fun `ruleset data cannot escape the literal it is emitted into`() {
+        // A message key is data: whatever it holds must come out as one Kotlin
+        // string literal. A quote that ended the literal, a dollar that opened a
+        // template, or a raw control character would each turn ruleset data into
+        // ruleset-controlled code.
+        val formats = emitted.getValue("Formats.kt")
+        val line = formats.lines().single { "kitchen." in it && "quote" in it }
+        assertTrue("""\"quote\"""" in line, line)
+        assertTrue("""back\\slash""" in line, line)
+        assertTrue("""\${'$'}dollar""" in line, line)
+        assertTrue("""\u0007""" in line, line)
+        // And nothing raw survives anywhere in what is emitted: no control
+        // character, and no template a ruleset could have planted.
+        for ((name, content) in emitted) {
+            val control = content.filter { it.code < 0x20 && it != '\n' }
+            assertEquals("", control, "$name holds a raw control character")
+            assertTrue("\${'$'}{" !in content.replace("\\\${'$'}", ""), "$name holds a string template")
+        }
+    }
+
+    @Test
+    fun `a choose whose first branch always applies emits no condition`() {
+        val checksums = emitted.getValue("Checksums.kt")
+        // The unconditional branch closes the chain, so nothing after it is
+        // emitted and `Ck.noBranch()` is not reachable from it.
+        assertTrue("Ck.luhn(" in checksums)
+        assertTrue(checksums.contains("Ck.noBranch()"), "the guarded choose still needs its fallback")
+    }
 }
