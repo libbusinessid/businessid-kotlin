@@ -52,7 +52,13 @@ jobs:
 
       - name: Fuzz the engine and the generator
         env:
-          BUSINESSID_FUZZ_SECONDS: ${{ github.event.inputs.fuzzSeconds || '600' }}
+          # Ten minutes a target on the weekly run, one on a pull request.
+          # The pull request trigger exists so a change to this workflow or to
+          # the benchmarks is seen before it is merged, not to re-fuzz the
+          # engine; ci.yml already runs a fuzz smoke test on every pull request.
+          # A guard that costs forty minutes gets deleted the first time someone
+          # is in a hurry.
+          BUSINESSID_FUZZ_SECONDS: ${{ github.event.inputs.fuzzSeconds || (github.event_name == 'pull_request' && '60' || '600') }}
         run: ./gradlew :businessid:fuzz :generator:fuzz -Pfuzz.seconds="$BUSINESSID_FUZZ_SECONDS"
 
       - name: Upload any finding
