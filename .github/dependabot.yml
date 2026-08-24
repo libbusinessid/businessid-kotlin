@@ -11,7 +11,14 @@ updates:
     schedule:
       interval: "weekly"
   - package-ecosystem: "gradle"
-    directory: "/"
+    # The consumer projects are standalone builds, absent from the root
+    # settings file, so a scan of "/" alone never reaches them. Their Android
+    # Gradle Plugin drifted out of date unnoticed until lint failed a build
+    # that had not changed.
+    directories:
+      - "/"
+      - "/consumer/android"
+      - "/consumer/jvm"
     schedule:
       interval: "weekly"
     # The rules bundle is not a dependency: it is pinned by rules.lock and

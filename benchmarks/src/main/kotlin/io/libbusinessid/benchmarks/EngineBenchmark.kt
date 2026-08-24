@@ -53,6 +53,18 @@ open class EngineBenchmark {
     /** Twenty alphanumeric characters through the ISO 7064 modulo 97 expansion. */
     private val mod97 = IdentifierInput(IdentifierKind.LEI, "000000ABCDEF12345670")
 
+    /**
+     * A German EUID, whose register identifier is looked up among 2 566 court
+     * codes. The list is a sorted string constant read by binary search, so this
+     * should sit beside the other validations rather than above them.
+     *
+     * euid-de-valid-001, synthetic.
+     */
+    private val membership = IdentifierInput(IdentifierKind.EUID, "DEF1103.HRB12345")
+
+    /** The same, refused by the list rather than by the shape. */
+    private val membershipRefused = IdentifierInput(IdentifierKind.EUID, "DEZZZZZ.HRB12345")
+
     @Setup
     fun setUp() {
         engine = BusinessIdEngine.default()
@@ -71,6 +83,16 @@ open class EngineBenchmark {
     @Benchmark
     fun mod97Checksum(blackhole: Blackhole) {
         blackhole.consume(engine.validate(mod97))
+    }
+
+    @Benchmark
+    fun membershipCheckedValidation(blackhole: Blackhole) {
+        blackhole.consume(engine.validate(membership))
+    }
+
+    @Benchmark
+    fun membershipRefusedValidation(blackhole: Blackhole) {
+        blackhole.consume(engine.validate(membershipRefused))
     }
 
     @Benchmark

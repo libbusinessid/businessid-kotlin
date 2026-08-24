@@ -282,7 +282,7 @@ conformant
 ./gradlew generateEngine   # re-emit the rules from the ruleset
 ./gradlew checkGenerated   # fail when the committed sources are stale
 ./gradlew fuzz             # Jazzer, beyond the regression corpus
-./gradlew :benchmarks:jmh  # the five measurements engine.md section 14 asks for
+./gradlew :benchmarks:jmh  # the five measurements section 14 asks for, and more
 ```
 
 Coverage is split the way `engine.md` section 12.2 splits it. The thresholds —
