@@ -1,0 +1,224 @@
+# Copyright The LibBusinessID Authors.
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  build:
+    name: Build on JDK ${{ matrix.jdk }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The JDK this project pins, and the current long term release. The
+        # published bytecode targets 11 whichever one builds it.
+        jdk: ['17', '25']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.jdk }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          validate-wrappers: true
+
+      - name: Verify the pinned digests
+        run: ./scripts/verify-lock.sh
+
+      - name: Regenerated sources match the pinned ruleset
+        run: ./gradlew checkGenerated
+
+      - name: Format and lint
+        run: ./gradlew ktlintCheck detekt
+
+      - name: Public API is unchanged
+        run: ./gradlew apiCheck
+
+      - name: Tests
+        run: ./gradlew test
+
+      - name: Coverage
+        run: ./gradlew coverage
+
+      - name: Assemble
+        run: ./gradlew assemble
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reports-jdk-${{ matrix.jdk }}
+          path: |
+            **/build/reports/
+            **/build/test-results/
+            build/reports/coverage-summary.txt
+          retention-days: 7
+
+  conformance:
+    name: Conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+
+      - name: Build the testee
+        run: ./gradlew :testee:installDist
+
+      # The runner comes from `spec` and from nowhere else, pinned to the commit
+      # rules.lock records under source_commit — the same commit as the corpus,
+      # which makes it impossible to judge a corpus with another comparator.
+      #
+      # actions/setup-go sets GOTOOLCHAIN=local, which forbids fetching a
+      # toolchain; the `go` line of the spec module is what binds, and it will
+      # rise one day.
+      - name: Run the shared conformance suite
+        env:
+          GOTOOLCHAIN: auto
+        run: |
+          source_commit="$(grep '^source_commit' rules.lock | cut -d'"' -f2)"
+          echo "runner pinned to spec@$source_commit"
+          go run "github.com/libbusinessid/spec/cmd/conformance-runner@$source_commit" \
+            -corpus spec/businessid-conformance.binpb \
+            -- ./testee/build/install/businessid-testee/bin/businessid-testee
+
+  fuzz-smoke:
+    name: Fuzz smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Fuzz the engine and the generator
+        run: ./gradlew :businessid:fuzz :generator:fuzz
+
+      - name: Upload any finding
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-findings
+          path: |
+            **/.cifuzz-corpus/
+            **/crash-*
+          retention-days: 30
+
+  consumers:
+    name: Consumer projects
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: 'tools platform-tools platforms;android-36'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: A JVM project takes the published artefact
+        run: ./gradlew consumerJvmTest
+
+      - name: An Android project takes the published artefact
+        run: ./gradlew consumerAndroidTest
+
+  publication:
+    name: Publication dry run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Publish into a local repository
+        run: ./gradlew publishMavenPublicationToLocalStagingRepository
+
+      - name: Documentation
+        run: ./gradlew :businessid:dokkaGeneratePublicationHtml
+
+      - name: What would be published
+        run: |
+          find businessid/build/staging-repository -type f \
+            \( -name '*.jar' -o -name '*.pom' -o -name '*.module' \) | sort
+
+      - name: Upload the artefacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maven-staging
+          path: businessid/build/staging-repository/
+          retention-days: 7
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: What the published library brings with it
+        run: ./gradlew :businessid:auditPublishedDependencies
+
+      - name: Resolve every declared dependency
+        run: ./gradlew resolveAllDependencies

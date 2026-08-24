@@ -116,3 +116,38 @@ tasks.test {
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     exclude("**/io/libbusinessid/generated/**")
 }
+
+// ---------------------------------------------------------------------------
+// Dependency audit.
+//
+// The published library declares nothing but the Kotlin standard library, and
+// that is a property worth failing a build over: a dependency added here is one
+// every caller inherits, and section 10.4 of engine.md forbids an HTTP one
+// outright.
+// ---------------------------------------------------------------------------
+
+tasks.register("auditPublishedDependencies") {
+    group = "verification"
+    description = "Fails when the published library declares a dependency beyond the Kotlin standard library."
+    val resolved = configurations.named("runtimeClasspath").map { classpath ->
+        classpath.incoming.resolutionResult.allComponents
+            .mapNotNull { it.moduleVersion?.module?.toString() }
+            // The library itself is the root of the graph, not a dependency.
+            .filterNot { it == "io.libbusinessid:businessid" }
+            .distinct()
+            .sorted()
+    }
+    doLast {
+        val expected = listOf("org.jetbrains.kotlin:kotlin-stdlib", "org.jetbrains:annotations")
+        val actual = resolved.get()
+        check(actual == expected) {
+            "the published library would bring\n  ${actual.joinToString("\n  ")}\nwhere it should bring\n  " +
+                expected.joinToString("\n  ")
+        }
+        logger.lifecycle("the published library brings: ${actual.joinToString(", ")}")
+    }
+}
+
+tasks.named("check") {
+    dependsOn("auditPublishedDependencies")
+}
