@@ -12,11 +12,7 @@ package io.libbusinessid
  *   ruleset's country rules; a proven contradiction with a recognised prefix is
  *   reported as [ReasonCode.COUNTRY_MISMATCH].
  */
-public data class IdentifierInput(
-    val kind: IdentifierKind,
-    val value: String,
-    val countryCode: String? = null,
-) {
+public data class IdentifierInput(val kind: IdentifierKind, val value: String, val countryCode: String? = null) {
     /**
      * The kind as a plain token.
      *
@@ -49,9 +45,7 @@ public data class IdentifierInput(
  *   the engine could no longer tell a silent caller from one asking for
  *   `compatible`.
  */
-public data class ValidationOptions(
-    val profile: ValidationProfile? = null,
-)
+public data class ValidationOptions(val profile: ValidationProfile? = null)
 
 /**
  * The outcome of one validation step.
@@ -175,10 +169,7 @@ public data class CanonicalizationResult(
  * @property id the numeric identifier, never renumbered and never reused.
  * @property capabilityName the registry name of the capability.
  */
-public data class Capability(
-    val id: Int,
-    val capabilityName: String,
-)
+public data class Capability(val id: Int, val capabilityName: String)
 
 /**
  * What the engine was built from.

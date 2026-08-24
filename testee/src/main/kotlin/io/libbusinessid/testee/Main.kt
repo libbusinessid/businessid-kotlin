@@ -32,11 +32,14 @@ internal object Answering {
         return when (request.operation) {
             Conformance.Operation.OPERATION_CANONICALIZE ->
                 response.setCanonicalization(canonicalize(request)).build()
+
             Conformance.Operation.OPERATION_VALIDATE_FORMAT,
             Conformance.Operation.OPERATION_VALIDATE_CHECKSUM,
             Conformance.Operation.OPERATION_VALIDATE,
             -> response.setValidationReport(validate(request)).build()
+
             Conformance.Operation.OPERATION_LOAD_RULESET -> response.setLoad(load(request)).build()
+
             else -> response.setFailure(
                 Testee.TesteeFailure.newBuilder()
                     .setKind(Testee.FailureKind.FAILURE_KIND_UNSUPPORTED_OPERATION)
@@ -45,12 +48,11 @@ internal object Answering {
         }
     }
 
-    private fun input(request: Testee.TesteeRequest) =
-        IdentifierInput(
-            kind = IdentifierKind(if (request.hasKind()) request.kind else ""),
-            value = request.input,
-            countryCode = if (request.hasCountryCode()) request.countryCode else null,
-        )
+    private fun input(request: Testee.TesteeRequest) = IdentifierInput(
+        kind = IdentifierKind(if (request.hasKind()) request.kind else ""),
+        value = request.input,
+        countryCode = if (request.hasCountryCode()) request.countryCode else null,
+    )
 
     /**
      * The absence of a profile is meaningful: it is what lets a definition apply
@@ -126,30 +128,40 @@ internal object Answering {
  * followed by exactly one write.
  */
 internal class Framing(input: InputStream, private val output: OutputStream) {
+    private companion object {
+        /** A 32 bit unsigned length, little endian. */
+        const val PREFIX_BYTES = 4
+        const val BYTE_MASK = 0xFF
+        const val BITS_PER_BYTE = 8
+    }
+
     private val stream = DataInputStream(input.buffered())
 
+    /** The next message, or null when the runner closed its end. */
     fun read(): ByteArray? {
-        val header = ByteArray(4)
+        val header = ByteArray(PREFIX_BYTES)
         var got = 0
-        while (got < 4) {
-            val n = stream.read(header, got, 4 - got)
+        while (got < PREFIX_BYTES) {
+            val n = stream.read(header, got, PREFIX_BYTES - got)
             if (n < 0) return if (got == 0) null else error("truncated length prefix")
             got += n
         }
-        val length = (header[0].toInt() and 0xFF) or
-            ((header[1].toInt() and 0xFF) shl 8) or
-            ((header[2].toInt() and 0xFF) shl 16) or
-            ((header[3].toInt() and 0xFF) shl 24)
+        var length = 0
+        for (i in PREFIX_BYTES - 1 downTo 0) {
+            length = (length shl BITS_PER_BYTE) or (header[i].toInt() and BYTE_MASK)
+        }
         val payload = ByteArray(length)
         stream.readFully(payload)
         return payload
     }
 
+    /** One message, prefixed by its length and flushed at once. */
     fun write(payload: ByteArray) {
-        output.write(payload.size and 0xFF)
-        output.write((payload.size ushr 8) and 0xFF)
-        output.write((payload.size ushr 16) and 0xFF)
-        output.write((payload.size ushr 24) and 0xFF)
+        var length = payload.size
+        repeat(PREFIX_BYTES) {
+            output.write(length and BYTE_MASK)
+            length = length ushr BITS_PER_BYTE
+        }
         output.write(payload)
         output.flush()
     }
@@ -168,6 +180,7 @@ internal fun serve(input: InputStream, output: OutputStream) {
     }
 }
 
+/** Reads requests on the standard input and writes responses on the standard output. */
 fun main() {
     serve(System.`in`, System.out)
 }

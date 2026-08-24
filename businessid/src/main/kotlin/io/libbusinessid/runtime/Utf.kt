@@ -17,6 +17,9 @@ internal object Utf {
     private const val ONE_BYTE_MAX = 0x7F
     private const val TWO_BYTE_MAX = 0x7FF
     private const val THREE_BYTE_MAX = 0xFFFF
+    private const val TWO_BYTE_LENGTH = 2
+    private const val THREE_BYTE_LENGTH = 3
+    private const val FOUR_BYTE_LENGTH = 4
 
     /**
      * UTF-8 length of [s] in bytes, without materialising the encoded form.
@@ -36,12 +39,15 @@ internal object Utf {
             val c = s[i]
             when {
                 c.code <= ONE_BYTE_MAX -> n += 1
-                c.code <= TWO_BYTE_MAX -> n += 2
+
+                c.code <= TWO_BYTE_MAX -> n += TWO_BYTE_LENGTH
+
                 Character.isHighSurrogate(c) && i + 1 < len && Character.isLowSurrogate(s[i + 1]) -> {
-                    n += 4
+                    n += FOUR_BYTE_LENGTH
                     i++
                 }
-                else -> n += 3
+
+                else -> n += THREE_BYTE_LENGTH
             }
             i++
         }

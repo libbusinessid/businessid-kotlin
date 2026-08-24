@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
  * The tri-state is the point: an algorithm that cannot be evaluated answers
  * `unsupported`, never `invalid`.
  */
-class ChecksumsTest {
+class CkTest {
     private fun assertValid(outcome: ChecksumOutcome) {
         assertEquals(ChecksumStatus.VALID, outcome.status)
         assertEquals(ReasonCode.OK, outcome.reason)

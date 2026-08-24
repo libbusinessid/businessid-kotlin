@@ -18,15 +18,26 @@ import kotlin.system.exitProcess
  * and the public API.
  */
 class Arguments(
+    /** The ruleset to read; a path, because it is a build input and not a resource. */
     val bundle: File,
+    /** The file declaring the digest the ruleset must match, or null. */
     val lock: File?,
+    /** The directory the emitted sources go into. */
     val out: File,
+    /** Compare with what is committed instead of writing. */
     val check: Boolean,
 )
 
 /** Thrown for a usage error, so a caller can report it rather than exit. */
 class UsageException(override val message: String) : Exception(message)
 
+/**
+ * Reads the command line, or explains what is wrong with it.
+ *
+ * One throw per way of getting it wrong: a single failure that said only
+ * "usage" would leave the caller to guess which argument it meant.
+ */
+@Suppress("ThrowsCount")
 fun parseArguments(argv: Array<String>): Arguments {
     var bundle: String? = null
     var lock: String? = null
@@ -56,9 +67,8 @@ fun parseArguments(argv: Array<String>): Arguments {
     )
 }
 
-internal fun sha256Hex(bytes: ByteArray): String =
-    MessageDigest.getInstance("SHA-256").digest(bytes)
-        .joinToString("") { String.format(Locale.ROOT, "%02x", it) }
+internal fun sha256Hex(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes)
+    .joinToString("") { String.format(Locale.ROOT, "%02x", it) }
 
 /**
  * Compares the ruleset against the digest `rules.lock` declares.
@@ -129,12 +139,7 @@ fun run(argv: Array<String>, out: PrintStream, err: PrintStream): Int {
     return 0
 }
 
-private fun verifyEmitted(
-    emitted: Map<String, String>,
-    target: File,
-    out: PrintStream,
-    err: PrintStream,
-): Int {
+private fun verifyEmitted(emitted: Map<String, String>, target: File, out: PrintStream, err: PrintStream): Int {
     val differences = emitted.filter { (name, content) ->
         val file = File(target, name)
         !file.isFile || file.readText() != content
@@ -152,6 +157,7 @@ private fun verifyEmitted(
     return 0
 }
 
+/** Runs the generator and ends the process with the code [run] returned. */
 fun main(argv: Array<String>) {
     exitProcess(run(argv, System.out, System.err))
 }

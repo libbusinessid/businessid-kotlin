@@ -142,9 +142,11 @@ class TesteeHonestyTest {
         val backwards = requests.reversed().map { withoutCaseId(Answering.answer(it)) }.reversed()
         assertEquals(forwards, backwards)
 
-        val shuffled = requests.shuffled(java.util.Random(20260824).let { rng ->
-            kotlin.random.Random(rng.nextLong())
-        })
+        val shuffled = requests.shuffled(
+            java.util.Random(20260824).let { rng ->
+                kotlin.random.Random(rng.nextLong())
+            },
+        )
         val byShuffle = shuffled.associateWith { withoutCaseId(Answering.answer(it)) }
         for ((index, request) in requests.withIndex()) {
             assertEquals(forwards[index], byShuffle.getValue(request))

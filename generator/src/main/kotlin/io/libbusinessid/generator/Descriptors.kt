@@ -1,6 +1,11 @@
 // Copyright The LibBusinessID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+@file:Suppress("MagicNumber")
+// The numbers here are the field numbers of `rules.proto`. Naming them would put
+// a second name on something the schema already names, and DescriptorTableTest
+// compares them against protoc's own descriptor set.
+
 package io.libbusinessid.generator
 
 /**

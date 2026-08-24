@@ -16,26 +16,23 @@ internal enum class ProgramRole {
 
 /** Helpers over a node, kept in one place so no check reimplements them. */
 internal object Nodes {
-    fun operationName(node: Rules.Node): String =
-        when (node.operationCase) {
-            Rules.Node.OperationCase.STRING_OPERATION -> node.stringOperation.kind.name
-            Rules.Node.OperationCase.INTEGER_OPERATION -> node.integerOperation.kind.name
-            Rules.Node.OperationCase.PREDICATE_OPERATION -> node.predicateOperation.kind.name
-            Rules.Node.OperationCase.CANONICALIZATION_OPERATION -> node.canonicalizationOperation.kind.name
-            Rules.Node.OperationCase.ASSERTION_OPERATION -> node.assertionOperation.kind.name
-            Rules.Node.OperationCase.CHECKSUM_OPERATION -> node.checksumOperation.kind.name
-            Rules.Node.OperationCase.CALL_OPERATION -> node.callOperation.kind.name
-            Rules.Node.OperationCase.OPERATION_NOT_SET -> "<absent>"
-            else -> "<absent>"
-        }
+    fun operationName(node: Rules.Node): String = when (node.operationCase) {
+        Rules.Node.OperationCase.STRING_OPERATION -> node.stringOperation.kind.name
+        Rules.Node.OperationCase.INTEGER_OPERATION -> node.integerOperation.kind.name
+        Rules.Node.OperationCase.PREDICATE_OPERATION -> node.predicateOperation.kind.name
+        Rules.Node.OperationCase.CANONICALIZATION_OPERATION -> node.canonicalizationOperation.kind.name
+        Rules.Node.OperationCase.ASSERTION_OPERATION -> node.assertionOperation.kind.name
+        Rules.Node.OperationCase.CHECKSUM_OPERATION -> node.checksumOperation.kind.name
+        Rules.Node.OperationCase.CALL_OPERATION -> node.callOperation.kind.name
+        Rules.Node.OperationCase.OPERATION_NOT_SET -> "<absent>"
+        else -> "<absent>"
+    }
 
-    fun isChecksumWhen(node: Rules.Node): Boolean =
-        node.operationCase == Rules.Node.OperationCase.CHECKSUM_OPERATION &&
-            node.checksumOperation.kind == Rules.ChecksumOpKind.CHECKSUM_OP_KIND_WHEN
+    fun isChecksumWhen(node: Rules.Node): Boolean = node.operationCase == Rules.Node.OperationCase.CHECKSUM_OPERATION &&
+        node.checksumOperation.kind == Rules.ChecksumOpKind.CHECKSUM_OP_KIND_WHEN
 
-    fun isSubject(node: Rules.Node): Boolean =
-        node.operationCase == Rules.Node.OperationCase.STRING_OPERATION &&
-            node.stringOperation.kind == Rules.StringOpKind.STRING_OP_KIND_SUBJECT
+    fun isSubject(node: Rules.Node): Boolean = node.operationCase == Rules.Node.OperationCase.STRING_OPERATION &&
+        node.stringOperation.kind == Rules.StringOpKind.STRING_OP_KIND_SUBJECT
 
     fun isPrependCountry(node: Rules.Node): Boolean =
         node.operationCase == Rules.Node.OperationCase.CANONICALIZATION_OPERATION &&
@@ -52,6 +49,7 @@ internal object Nodes {
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_UPPERCASE_ASCII,
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_REMOVE_CHARS,
             -> true
+
             else -> false
         }
     }

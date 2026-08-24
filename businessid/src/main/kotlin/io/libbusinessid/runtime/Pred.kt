@@ -25,7 +25,7 @@ internal object Pred {
     @JvmStatic
     internal fun lengthEq(v: CpView?, n: Int): Boolean = v != null && v.length == n
 
-    /** `length_in(expr, [n...])`, with [lengths] sorted and deduplicated. */
+    /** `length_in(expr, lengths)`, with [lengths] sorted and deduplicated. */
     @JvmStatic
     internal fun lengthIn(v: CpView?, lengths: IntArray): Boolean = v != null && lengths.binarySearch(v.length) >= 0
 

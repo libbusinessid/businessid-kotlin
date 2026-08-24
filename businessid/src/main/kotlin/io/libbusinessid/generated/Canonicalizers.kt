@@ -10,9 +10,7 @@
 package io.libbusinessid.generated
 
 import io.libbusinessid.ValidationProfile
-import io.libbusinessid.runtime.Ascii
 import io.libbusinessid.runtime.CanonBuffer
-import io.libbusinessid.runtime.CpView
 import io.libbusinessid.runtime.Pred
 import io.libbusinessid.runtime.Txt
 
@@ -813,4 +811,3 @@ internal fun canon_96(b: CanonBuffer, profile: ValidationProfile, target: Int) {
     b.removeChars(K1)
     prependCountryIfMissing(target, b)
 }
-

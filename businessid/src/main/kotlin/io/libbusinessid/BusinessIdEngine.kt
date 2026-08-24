@@ -43,10 +43,8 @@ public class BusinessIdEngine private constructor() {
      * when the format holds.
      */
     @JvmOverloads
-    public fun validate(
-        input: IdentifierInput,
-        options: ValidationOptions = ValidationOptions(),
-    ): ValidationReport = Pipeline.validate(input, options.profile, Operation.VALIDATE)
+    public fun validate(input: IdentifierInput, options: ValidationOptions = ValidationOptions()): ValidationReport =
+        Pipeline.validate(input, options.profile, Operation.VALIDATE)
 
     /**
      * Stops after the format step.

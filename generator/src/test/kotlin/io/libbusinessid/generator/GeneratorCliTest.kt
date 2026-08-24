@@ -32,22 +32,23 @@ class GeneratorCliTest {
         return Run(code, out.toString("UTF-8"), err.toString("UTF-8"))
     }
 
-    private fun lockFile(dir: File, digest: String): File =
-        File(dir, "rules.lock").apply {
-            writeText(
-                """
+    private fun lockFile(dir: File, digest: String): File = File(dir, "rules.lock").apply {
+        writeText(
+            """
                 # a comment, and a line without an equals sign
                 rules_version = "2026.08.26"
                 rules_sha256 = "$digest"
-                """.trimIndent(),
-            )
-        }
+            """.trimIndent(),
+        )
+    }
 
     @Test
     fun `it emits from the pinned ruleset`(@TempDir dir: File) {
         val result = run(
-            "--bundle", SpecFiles.file("businessid-rules.binpb").path,
-            "--out", dir.path,
+            "--bundle",
+            SpecFiles.file("businessid-rules.binpb").path,
+            "--out",
+            dir.path,
         )
         assertEquals(0, result.code, result.err)
         assertTrue("emitted 5 files" in result.out, result.out)

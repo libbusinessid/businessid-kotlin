@@ -34,9 +34,12 @@ val generateEngine = tasks.register<JavaExec>("generateEngine") {
     inputs.file(lock)
     outputs.dir(generatedSourceDir)
     args(
-        "--bundle", bundle.asFile.absolutePath,
-        "--lock", lock.asFile.absolutePath,
-        "--out", generatedSourceDir.asFile.absolutePath,
+        "--bundle",
+        bundle.asFile.absolutePath,
+        "--lock",
+        lock.asFile.absolutePath,
+        "--out",
+        generatedSourceDir.asFile.absolutePath,
     )
 }
 
@@ -55,9 +58,12 @@ val checkGenerated = tasks.register<JavaExec>("checkGenerated") {
     inputs.dir(generatedSourceDir)
     outputs.upToDateWhen { false }
     args(
-        "--bundle", bundle.asFile.absolutePath,
-        "--lock", lock.asFile.absolutePath,
-        "--out", generatedSourceDir.asFile.absolutePath,
+        "--bundle",
+        bundle.asFile.absolutePath,
+        "--lock",
+        lock.asFile.absolutePath,
+        "--out",
+        generatedSourceDir.asFile.absolutePath,
         "--check",
     )
 }
@@ -72,7 +78,13 @@ tasks.named("check") {
 // two disagreeing would be a finding worth having.
 // ---------------------------------------------------------------------------
 
-val ktlint: Configuration by configurations.creating
+val ktlint: Configuration by configurations.creating {
+    // ktlint-cli publishes a plain and a shadowed variant; the shadowed one
+    // carries its own dependencies, which is what a standalone run needs.
+    attributes {
+        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling::class.java, Bundling.SHADOWED))
+    }
+}
 
 dependencies {
     ktlint(libs.ktlint.cli)
@@ -148,18 +160,17 @@ abstract class CoverageGate : DefaultTask() {
         private fun percent(covered: Long, missed: Long) =
             if (covered + missed == 0L) 100.0 else 100.0 * covered / (covered + missed)
 
-        fun describe(what: String) =
-            String.format(
-                java.util.Locale.ROOT,
-                "%-14s lines %6.2f%% (%d/%d)  branches %6.2f%% (%d/%d)",
-                what,
-                linePercent(),
-                linesCovered,
-                linesCovered + linesMissed,
-                branchPercent(),
-                branchesCovered,
-                branchesCovered + branchesMissed,
-            )
+        fun describe(what: String) = String.format(
+            java.util.Locale.ROOT,
+            "%-14s lines %6.2f%% (%d/%d)  branches %6.2f%% (%d/%d)",
+            what,
+            linePercent(),
+            linesCovered,
+            linesCovered + linesMissed,
+            branchPercent(),
+            branchesCovered,
+            branchesCovered + branchesMissed,
+        )
     }
 
     @TaskAction
@@ -187,6 +198,7 @@ abstract class CoverageGate : DefaultTask() {
                                 into.linesCovered += covered
                                 into.linesMissed += missed
                             }
+
                             "BRANCH" -> {
                                 into.branchesCovered += covered
                                 into.branchesMissed += missed

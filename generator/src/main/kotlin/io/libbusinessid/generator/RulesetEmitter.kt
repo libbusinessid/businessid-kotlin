@@ -13,10 +13,7 @@ package io.libbusinessid.generator
  * nothing a later one does not.
  */
 @Suppress("TooManyFunctions")
-internal class RulesetEmitter(
-    private val bundle: LoadedBundle,
-    private val emitter: Emitter,
-) {
+internal class RulesetEmitter(private val bundle: LoadedBundle, private val emitter: Emitter) {
     private val definitions = bundle.proto.identifiersList
     private val dispatchers = bundle.dispatchers
 
@@ -194,7 +191,9 @@ internal class RulesetEmitter(
             appendLine("            $index ->")
             appendLine("                when {")
             for ((prefix, target) in prefixes) {
-                appendLine("                    Pred.startsWith(value, ${emitter.codePointConstant(prefix)}) -> $target")
+                appendLine(
+                    "                    Pred.startsWith(value, ${emitter.codePointConstant(prefix)}) -> $target",
+                )
             }
             appendLine("                    else -> -1")
             appendLine("                }")

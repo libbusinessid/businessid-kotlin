@@ -74,12 +74,8 @@ internal object Arith {
      * `DIGIT_VALUE`.
      */
     @JvmStatic
-    internal fun weightedSumAlphabet(
-        v: CpView?,
-        weights: LongArray,
-        alignment: Alignment,
-        alphabet: IntArray,
-    ): Long? = weightedSum(v, weights, alignment, alphabet, base36 = false)
+    internal fun weightedSumAlphabet(v: CpView?, weights: LongArray, alignment: Alignment, alphabet: IntArray): Long? =
+        weightedSum(v, weights, alignment, alphabet, base36 = false)
 
     private fun weightedSum(
         v: CpView?,
@@ -108,10 +104,12 @@ internal object Arith {
                 val pairs = if (n < w) n else w
                 for (i in 0 until pairs) acc = accumulate(acc, values[i], weights[i])
             }
+
             Alignment.RIGHT -> {
                 val pairs = if (n < w) n else w
                 for (k in 0 until pairs) acc = accumulate(acc, values[n - 1 - k], weights[w - 1 - k])
             }
+
             Alignment.CYCLE -> {
                 for (i in 0 until n) acc = accumulate(acc, values[i], weights[i % w])
             }
@@ -122,12 +120,11 @@ internal object Arith {
     private fun accumulate(acc: Long, value: Int, weight: Long): Long =
         Math.addExact(acc, Math.multiplyExact(value.toLong(), weight))
 
-    private fun mapValue(c: Int, alphabet: IntArray?, base36: Boolean): Int =
-        when {
-            alphabet != null -> indexIn(alphabet, c)
-            base36 -> Ascii.base36Value(c)
-            else -> Ascii.digitValue(c)
-        }
+    private fun mapValue(c: Int, alphabet: IntArray?, base36: Boolean): Int = when {
+        alphabet != null -> indexIn(alphabet, c)
+        base36 -> Ascii.base36Value(c)
+        else -> Ascii.digitValue(c)
+    }
 
     private fun indexIn(alphabet: IntArray, c: Int): Int {
         for (i in alphabet.indices) if (alphabet[i] == c) return i

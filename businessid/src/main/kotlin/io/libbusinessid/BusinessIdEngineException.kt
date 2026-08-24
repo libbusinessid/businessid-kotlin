@@ -10,7 +10,5 @@ package io.libbusinessid
  * report, not an exception. This type exists for a broken internal invariant,
  * which the load checks of the generator are supposed to have made impossible.
  */
-public class BusinessIdEngineException internal constructor(
-    message: String,
-    cause: Throwable,
-) : RuntimeException(message, cause)
+public class BusinessIdEngineException internal constructor(message: String, cause: Throwable) :
+    RuntimeException(message, cause)

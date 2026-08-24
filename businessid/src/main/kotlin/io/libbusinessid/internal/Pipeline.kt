@@ -3,7 +3,6 @@
 
 package io.libbusinessid.internal
 
-import io.libbusinessid.BusinessIdEngineException
 import io.libbusinessid.CanonicalizationResult
 import io.libbusinessid.IdentifierInput
 import io.libbusinessid.IdentifierKind
@@ -111,19 +110,18 @@ internal object Pipeline {
     private fun runChecksum(definition: Int, ctx: EvalContext): ChecksumOutcome? =
         guardEngineErrors("checksum") { Ruleset.checksum(definition, ctx) }
 
-    private fun report(d: Dispatched, format: StepResult, checksum: StepResult) =
-        ValidationReport(
-            kind = IdentifierKind(d.kind),
-            inputValue = d.rawInput,
-            canonicalValue = d.canonicalValue,
-            countryCode = d.countryCode,
-            profile = d.profile,
-            rulesVersion = Ruleset.RULES_VERSION,
-            formatVersion = Ruleset.FORMAT_VERSION,
-            engineVersion = EngineVersion.VALUE,
-            format = format,
-            checksum = checksum,
-        )
+    private fun report(d: Dispatched, format: StepResult, checksum: StepResult) = ValidationReport(
+        kind = IdentifierKind(d.kind),
+        inputValue = d.rawInput,
+        canonicalValue = d.canonicalValue,
+        countryCode = d.countryCode,
+        profile = d.profile,
+        rulesVersion = Ruleset.RULES_VERSION,
+        formatVersion = Ruleset.FORMAT_VERSION,
+        engineVersion = EngineVersion.VALUE,
+        format = format,
+        checksum = checksum,
+    )
 
     /**
      * The outcome of the dispatch phase.
@@ -132,6 +130,7 @@ internal object Pipeline {
      * terminal answer, and the identity fields already hold what the report must
      * carry for that branch.
      */
+    @Suppress("LongParameterList")
     private class Dispatched(
         val rawInput: String,
         val kind: String,
@@ -182,16 +181,26 @@ internal object Pipeline {
             if (token.isNotEmpty()) {
                 if (!Tokens.isCountryToken(token)) {
                     return partial(
-                        input, canonicalKind, buffer.snapshot(), rawCountry, dispatchProfile,
-                        StepStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_COUNTRY,
+                        input,
+                        canonicalKind,
+                        buffer.snapshot(),
+                        rawCountry,
+                        dispatchProfile,
+                        StepStatus.UNSUPPORTED,
+                        ReasonCode.UNSUPPORTED_COUNTRY,
                     )
                 }
                 normalizedCountry = Ruleset.countryAlias(d, token)
                 countryTarget = Ruleset.countryTarget(d, normalizedCountry)
                 if (countryTarget < 0 && Ruleset.globalTarget(d) < 0) {
                     return partial(
-                        input, canonicalKind, buffer.snapshot(), normalizedCountry, dispatchProfile,
-                        StepStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_COUNTRY,
+                        input,
+                        canonicalKind,
+                        buffer.snapshot(),
+                        normalizedCountry,
+                        dispatchProfile,
+                        StepStatus.UNSUPPORTED,
+                        ReasonCode.UNSUPPORTED_COUNTRY,
                     )
                 }
             }
@@ -201,8 +210,13 @@ internal object Pipeline {
         val prefixTarget = Ruleset.prefixTarget(d, buffer.view())
         if (countryTarget >= 0 && prefixTarget >= 0 && countryTarget != prefixTarget) {
             return partial(
-                input, canonicalKind, buffer.snapshot(), normalizedCountry, dispatchProfile,
-                StepStatus.INVALID, ReasonCode.COUNTRY_MISMATCH,
+                input,
+                canonicalKind,
+                buffer.snapshot(),
+                normalizedCountry,
+                dispatchProfile,
+                StepStatus.INVALID,
+                ReasonCode.COUNTRY_MISMATCH,
             )
         }
 
@@ -213,8 +227,13 @@ internal object Pipeline {
         if (target < 0) target = Ruleset.unprefixedTarget(d)
         if (target < 0) {
             return partial(
-                input, canonicalKind, buffer.snapshot(), normalizedCountry, dispatchProfile,
-                StepStatus.UNSUPPORTED, ReasonCode.MISSING_COUNTRY_CODE,
+                input,
+                canonicalKind,
+                buffer.snapshot(),
+                normalizedCountry,
+                dispatchProfile,
+                StepStatus.UNSUPPORTED,
+                ReasonCode.MISSING_COUNTRY_CODE,
             )
         }
 
@@ -238,20 +257,16 @@ internal object Pipeline {
         )
     }
 
-    private fun unresolved(
-        input: IdentifierInput,
-        kindToken: String,
-        profile: ValidationProfile,
-        reason: ReasonCode,
-    ) = Dispatched(
-        rawInput = input.value,
-        kind = kindToken,
-        canonicalValue = input.value,
-        countryCode = input.countryCode,
-        profile = profile,
-        status = StepStatus.UNSUPPORTED,
-        reason = reason,
-    )
+    private fun unresolved(input: IdentifierInput, kindToken: String, profile: ValidationProfile, reason: ReasonCode) =
+        Dispatched(
+            rawInput = input.value,
+            kind = kindToken,
+            canonicalValue = input.value,
+            countryCode = input.countryCode,
+            profile = profile,
+            status = StepStatus.UNSUPPORTED,
+            reason = reason,
+        )
 
     @Suppress("LongParameterList")
     private fun partial(

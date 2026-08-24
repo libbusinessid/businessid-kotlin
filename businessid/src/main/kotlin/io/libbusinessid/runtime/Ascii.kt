@@ -1,6 +1,12 @@
 // Copyright The LibBusinessID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+@file:Suppress("MagicNumber")
+// The numbers here are the frozen tables themselves: the ASCII class boundaries
+// and the `whitespace_v1` code points, written as the specification writes them.
+// A name per entry would put a second spelling on a table that must be read
+// against `ir.md` section 7 character for character.
+
 package io.libbusinessid.runtime
 
 /**
@@ -42,12 +48,11 @@ internal object Ascii {
 
     /** Base 36 value of an ASCII digit or upper case letter, or `-1`. */
     @JvmStatic
-    internal fun base36Value(c: Int): Int =
-        when {
-            isDigit(c) -> c - DIGIT_0
-            isUpperLetter(c) -> c - UPPER_A + BASE36_LETTER_OFFSET
-            else -> -1
-        }
+    internal fun base36Value(c: Int): Int = when {
+        isDigit(c) -> c - DIGIT_0
+        isUpperLetter(c) -> c - UPPER_A + BASE36_LETTER_OFFSET
+        else -> -1
+    }
 
     /**
      * The frozen `whitespace_v1` table, sorted so a lookup is a binary search.

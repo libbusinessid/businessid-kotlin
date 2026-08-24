@@ -1,6 +1,11 @@
 // Copyright The LibBusinessID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+@file:Suppress("MagicNumber")
+// The numbers in this file are the twenty-five load checks of `ir.md` section
+// 10. Naming them would hide the one thing a reader needs: which check a refusal
+// belongs to. Every other constant lives in `Limits`.
+
 package io.libbusinessid.generator
 
 import com.google.protobuf.InvalidProtocolBufferException
@@ -26,10 +31,7 @@ import java.util.Locale
  * `invalid_ruleset`, so the order is not observable.
  */
 @Suppress("LargeClass", "TooManyFunctions")
-internal class Loader private constructor(
-    private val bytes: ByteArray,
-    private val bundle: Rules.RuleBundle,
-) {
+internal class Loader private constructor(private val bytes: ByteArray, private val bundle: Rules.RuleBundle) {
     private val used = sortedSetOf<Int>()
     private lateinit var programsById: Map<Int, Rules.Program>
     private lateinit var roles: Map<Int, MutableSet<ProgramRole>>
@@ -142,9 +144,12 @@ internal class Loader private constructor(
         val first = findings.firstOrNull() ?: return
         val detail = when (first) {
             is Wire.Finding.UnknownField -> "unknown field ${first.number} in ${first.path}"
+
             is Wire.Finding.RepeatedSingular -> "singular field ${first.number} of ${first.path} encoded twice"
+
             is Wire.Finding.TwoOneofBranches ->
                 "two branches of one oneof in ${first.path}: ${first.first} and ${first.second}"
+
             is Wire.Finding.Malformed -> "malformed encoding in ${first.path}: ${first.detail}"
         }
         invalidRuleset(5, detail)
@@ -185,7 +190,11 @@ internal class Loader private constructor(
                 invalidRuleset(8, "programs are not sorted by ascending id at ${p.id}")
             }
             previous = p.id.toLong()
-            if (Rules.ProgramKind.forNumber(p.kindValue).let { it == null || it == Rules.ProgramKind.PROGRAM_KIND_UNSPECIFIED }) {
+            if (Rules.ProgramKind.forNumber(p.kindValue).let {
+                    it == null ||
+                        it == Rules.ProgramKind.PROGRAM_KIND_UNSPECIFIED
+                }
+            ) {
                 invalidRuleset(8, "program ${p.id} declares kind ${p.kindValue}")
             }
         }
@@ -265,60 +274,61 @@ internal class Loader private constructor(
     }
 
     @Suppress("CyclomaticComplexMethod")
-    private fun producedType(node: Rules.Node, where: String): Rules.ValueType =
-        when (node.operationCase) {
-            Rules.Node.OperationCase.STRING_OPERATION -> {
-                requireKnown(node.stringOperation.kindValue, Rules.StringOpKind::forNumber, where, "string")
-                used += Capabilities.of(node.stringOperation.kind).toSet()
-                Rules.ValueType.VALUE_TYPE_STRING
-            }
-            Rules.Node.OperationCase.INTEGER_OPERATION -> {
-                requireKnown(node.integerOperation.kindValue, Rules.IntegerOpKind::forNumber, where, "integer")
-                used += Capabilities.of(node.integerOperation.kind).toSet()
-                Rules.ValueType.VALUE_TYPE_INTEGER
-            }
-            Rules.Node.OperationCase.PREDICATE_OPERATION -> {
-                requireKnown(node.predicateOperation.kindValue, Rules.PredicateOpKind::forNumber, where, "predicate")
-                used += Capabilities.of(node.predicateOperation.kind).toSet()
-                Rules.ValueType.VALUE_TYPE_BOOLEAN
-            }
-            Rules.Node.OperationCase.CANONICALIZATION_OPERATION -> {
-                requireKnown(
-                    node.canonicalizationOperation.kindValue,
-                    Rules.CanonicalizationOpKind::forNumber,
-                    where,
-                    "canonicalization",
-                )
-                used += Capabilities.of(node.canonicalizationOperation.kind).toSet()
-                Rules.ValueType.VALUE_TYPE_CANONICALIZATION_STEP
-            }
-            Rules.Node.OperationCase.ASSERTION_OPERATION -> {
-                requireKnown(node.assertionOperation.kindValue, Rules.AssertionOpKind::forNumber, where, "assertion")
-                used += Capabilities.of(node.assertionOperation.kind).toSet()
-                Rules.ValueType.VALUE_TYPE_ASSERTION
-            }
-            Rules.Node.OperationCase.CHECKSUM_OPERATION -> {
-                requireKnown(node.checksumOperation.kindValue, Rules.ChecksumOpKind::forNumber, where, "checksum")
-                used += Capabilities.of(node.checksumOperation.kind).toSet()
-                Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME
-            }
-            Rules.Node.OperationCase.CALL_OPERATION -> {
-                requireKnown(node.callOperation.kindValue, Rules.CallOpKind::forNumber, where, "call")
-                used += Capabilities.of(node.callOperation.kind).toSet()
-                when (node.callOperation.kind) {
-                    Rules.CallOpKind.CALL_OP_KIND_FORMAT -> Rules.ValueType.VALUE_TYPE_ASSERTION
-                    else -> Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME
-                }
-            }
-            else -> invalidRuleset(10, "$where carries no operation")
+    private fun producedType(node: Rules.Node, where: String): Rules.ValueType = when (node.operationCase) {
+        Rules.Node.OperationCase.STRING_OPERATION -> {
+            requireKnown(node.stringOperation.kindValue, Rules.StringOpKind::forNumber, where, "string")
+            used += Capabilities.of(node.stringOperation.kind).toSet()
+            Rules.ValueType.VALUE_TYPE_STRING
         }
 
-    private fun <E : Enum<E>> requireKnown(
-        value: Int,
-        lookup: (Int) -> E?,
-        where: String,
-        family: String,
-    ) {
+        Rules.Node.OperationCase.INTEGER_OPERATION -> {
+            requireKnown(node.integerOperation.kindValue, Rules.IntegerOpKind::forNumber, where, "integer")
+            used += Capabilities.of(node.integerOperation.kind).toSet()
+            Rules.ValueType.VALUE_TYPE_INTEGER
+        }
+
+        Rules.Node.OperationCase.PREDICATE_OPERATION -> {
+            requireKnown(node.predicateOperation.kindValue, Rules.PredicateOpKind::forNumber, where, "predicate")
+            used += Capabilities.of(node.predicateOperation.kind).toSet()
+            Rules.ValueType.VALUE_TYPE_BOOLEAN
+        }
+
+        Rules.Node.OperationCase.CANONICALIZATION_OPERATION -> {
+            requireKnown(
+                node.canonicalizationOperation.kindValue,
+                Rules.CanonicalizationOpKind::forNumber,
+                where,
+                "canonicalization",
+            )
+            used += Capabilities.of(node.canonicalizationOperation.kind).toSet()
+            Rules.ValueType.VALUE_TYPE_CANONICALIZATION_STEP
+        }
+
+        Rules.Node.OperationCase.ASSERTION_OPERATION -> {
+            requireKnown(node.assertionOperation.kindValue, Rules.AssertionOpKind::forNumber, where, "assertion")
+            used += Capabilities.of(node.assertionOperation.kind).toSet()
+            Rules.ValueType.VALUE_TYPE_ASSERTION
+        }
+
+        Rules.Node.OperationCase.CHECKSUM_OPERATION -> {
+            requireKnown(node.checksumOperation.kindValue, Rules.ChecksumOpKind::forNumber, where, "checksum")
+            used += Capabilities.of(node.checksumOperation.kind).toSet()
+            Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME
+        }
+
+        Rules.Node.OperationCase.CALL_OPERATION -> {
+            requireKnown(node.callOperation.kindValue, Rules.CallOpKind::forNumber, where, "call")
+            used += Capabilities.of(node.callOperation.kind).toSet()
+            when (node.callOperation.kind) {
+                Rules.CallOpKind.CALL_OP_KIND_FORMAT -> Rules.ValueType.VALUE_TYPE_ASSERTION
+                else -> Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME
+            }
+        }
+
+        else -> invalidRuleset(10, "$where carries no operation")
+    }
+
+    private fun <E : Enum<E>> requireKnown(value: Int, lookup: (Int) -> E?, where: String, family: String) {
         val resolved = lookup(value)
         if (resolved == null || resolved.ordinal == 0) {
             invalidRuleset(10, "$where declares $family operation $value")
@@ -336,7 +346,7 @@ internal class Loader private constructor(
                         invalidRuleset(11, "$where reads node $operand, which is not a strictly lower index")
                     }
                 }
-                checkArity(p, node, index, where)
+                checkArity(p, node, where)
             }
         }
     }
@@ -347,16 +357,17 @@ internal class Loader private constructor(
     private fun operandTypes(p: Rules.Program, node: Rules.Node): List<Rules.ValueType> =
         node.inputNodesList.map { typeOf(p, it) }
 
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
-    private fun checkArity(p: Rules.Program, node: Rules.Node, index: Int, where: String) {
+    // One branch per operation family, which is the shape check 11 is stated in.
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth")
+    private fun checkArity(p: Rules.Program, node: Rules.Node, where: String) {
         val types = operandTypes(p, node)
         val n = types.size
-        val S = Rules.ValueType.VALUE_TYPE_STRING
-        val I = Rules.ValueType.VALUE_TYPE_INTEGER
-        val B = Rules.ValueType.VALUE_TYPE_BOOLEAN
-        val C = Rules.ValueType.VALUE_TYPE_CANONICALIZATION_STEP
-        val A = Rules.ValueType.VALUE_TYPE_ASSERTION
-        val K = Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME
+        val string = Rules.ValueType.VALUE_TYPE_STRING
+        val int = Rules.ValueType.VALUE_TYPE_INTEGER
+        val bool = Rules.ValueType.VALUE_TYPE_BOOLEAN
+        val step = Rules.ValueType.VALUE_TYPE_CANONICALIZATION_STEP
+        val assertion = Rules.ValueType.VALUE_TYPE_ASSERTION
+        val outcome = Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME
 
         fun exact(count: Int, vararg expected: Rules.ValueType) {
             if (n != count) invalidRuleset(11, "$where takes $count operands, $n given")
@@ -379,59 +390,81 @@ internal class Loader private constructor(
                 Rules.StringOpKind.STRING_OP_KIND_SUBJECT,
                 Rules.StringOpKind.STRING_OP_KIND_COUNTRY_CODE,
                 -> exact(0)
+
                 Rules.StringOpKind.STRING_OP_KIND_CONCAT ->
-                    homogeneous(Limits.MIN_CONCAT_OPERANDS, Limits.MAX_CONCAT_OPERANDS, S)
-                else -> exact(1, S)
+                    homogeneous(Limits.MIN_CONCAT_OPERANDS, Limits.MAX_CONCAT_OPERANDS, string)
+
+                else -> exact(1, string)
             }
+
             Rules.Node.OperationCase.INTEGER_OPERATION -> when (node.integerOperation.kind) {
                 Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER,
                 Rules.IntegerOpKind.INTEGER_OP_KIND_MOD_DIGITS,
                 Rules.IntegerOpKind.INTEGER_OP_KIND_WEIGHTED_SUM,
-                -> exact(1, S)
-                else -> exact(1, I)
+                -> exact(1, string)
+
+                else -> exact(1, int)
             }
+
             Rules.Node.OperationCase.PREDICATE_OPERATION -> when (node.predicateOperation.kind) {
-                Rules.PredicateOpKind.PREDICATE_OP_KIND_EQUALS -> exact(2, S, S)
+                Rules.PredicateOpKind.PREDICATE_OP_KIND_EQUALS -> exact(2, string, string)
+
                 Rules.PredicateOpKind.PREDICATE_OP_KIND_ALL,
                 Rules.PredicateOpKind.PREDICATE_OP_KIND_ANY,
-                -> homogeneous(1, Int.MAX_VALUE, B)
-                Rules.PredicateOpKind.PREDICATE_OP_KIND_NOT -> exact(1, B)
+                -> homogeneous(1, Int.MAX_VALUE, bool)
+
+                Rules.PredicateOpKind.PREDICATE_OP_KIND_NOT -> exact(1, bool)
+
                 Rules.PredicateOpKind.PREDICATE_OP_KIND_PROFILE_IS -> exact(0)
-                Rules.PredicateOpKind.PREDICATE_OP_KIND_INTEGER_IS -> exact(1, I)
-                else -> exact(1, S)
+
+                Rules.PredicateOpKind.PREDICATE_OP_KIND_INTEGER_IS -> exact(1, int)
+
+                else -> exact(1, string)
             }
+
             Rules.Node.OperationCase.CANONICALIZATION_OPERATION -> when (node.canonicalizationOperation.kind) {
                 Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_SEQUENCE ->
-                    homogeneous(0, Int.MAX_VALUE, C)
+                    homogeneous(0, Int.MAX_VALUE, step)
+
                 Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN -> {
                     if (n < 2) invalidRuleset(11, "$where takes a predicate and at least one step")
-                    if (types[0] != B) invalidRuleset(11, "$where operand 0 is ${types[0]}, expected $B")
+                    if (types[0] != bool) invalidRuleset(11, "$where operand 0 is ${types[0]}, expected $bool")
                     for (i in 1 until n) {
-                        if (types[i] != C) invalidRuleset(11, "$where operand $i is ${types[i]}, expected $C")
+                        if (types[i] != step) invalidRuleset(11, "$where operand $i is ${types[i]}, expected $step")
                     }
                 }
+
                 else -> exact(0)
             }
+
             Rules.Node.OperationCase.ASSERTION_OPERATION -> when (node.assertionOperation.kind) {
-                Rules.AssertionOpKind.ASSERTION_OP_KIND_SEQUENCE -> homogeneous(1, Int.MAX_VALUE, A)
-                else -> exact(1, B)
+                Rules.AssertionOpKind.ASSERTION_OP_KIND_SEQUENCE -> homogeneous(1, Int.MAX_VALUE, assertion)
+                else -> exact(1, bool)
             }
+
             Rules.Node.OperationCase.CHECKSUM_OPERATION -> when (node.checksumOperation.kind) {
                 Rules.ChecksumOpKind.CHECKSUM_OP_KIND_LUHN,
                 Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ISO7064_MOD97_10,
-                -> exact(1, S)
+                -> exact(1, string)
+
                 Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_DIGIT,
                 Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_SLICE,
-                -> exact(2, I, S)
-                Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_CONSTANT -> exact(1, I)
+                -> exact(2, int, string)
+
+                Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_CONSTANT -> exact(1, int)
+
                 Rules.ChecksumOpKind.CHECKSUM_OP_KIND_CHOOSE,
                 Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ALL_CHECKS,
                 Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ANY_CHECK,
-                -> homogeneous(1, Int.MAX_VALUE, K)
-                Rules.ChecksumOpKind.CHECKSUM_OP_KIND_WHEN -> exact(2, B, K)
+                -> homogeneous(1, Int.MAX_VALUE, outcome)
+
+                Rules.ChecksumOpKind.CHECKSUM_OP_KIND_WHEN -> exact(2, bool, outcome)
+
                 else -> exact(0)
             }
-            Rules.Node.OperationCase.CALL_OPERATION -> exact(1, S)
+
+            Rules.Node.OperationCase.CALL_OPERATION -> exact(1, string)
+
             else -> invalidRuleset(11, "$where carries no operation")
         }
     }
@@ -451,16 +484,23 @@ internal class Loader private constructor(
                 val where = "program ${p.id} node $index"
                 when (node.operationCase) {
                     Rules.Node.OperationCase.STRING_OPERATION -> stringParameters(node.stringOperation, where)
+
                     Rules.Node.OperationCase.INTEGER_OPERATION -> integerParameters(node.integerOperation, where)
+
                     Rules.Node.OperationCase.PREDICATE_OPERATION ->
                         predicateParameters(node.predicateOperation, where)
+
                     Rules.Node.OperationCase.CANONICALIZATION_OPERATION ->
                         canonicalizationParameters(node.canonicalizationOperation, where)
+
                     Rules.Node.OperationCase.ASSERTION_OPERATION ->
                         assertionParameters(node.assertionOperation, where)
+
                     Rules.Node.OperationCase.CHECKSUM_OPERATION ->
                         checksumParameters(node.checksumOperation, where)
+
                     Rules.Node.OperationCase.CALL_OPERATION -> Unit
+
                     else -> invalidRuleset(12, "$where carries no operation")
                 }
             }
@@ -502,14 +542,19 @@ internal class Loader private constructor(
                 expect(where, present, setOf("text"))
                 constantText(where, op.text, nonEmpty = false)
             }
+
             Rules.StringOpKind.STRING_OP_KIND_VALUE,
             Rules.StringOpKind.STRING_OP_KIND_SUBJECT,
             Rules.StringOpKind.STRING_OP_KIND_COUNTRY_CODE,
             Rules.StringOpKind.STRING_OP_KIND_CONCAT,
             -> expect(where, present, emptySet())
+
             Rules.StringOpKind.STRING_OP_KIND_SLICE -> expect(where, present, setOf("start", "end"))
+
             Rules.StringOpKind.STRING_OP_KIND_SLICE_FROM -> expect(where, present, setOf("start"))
+
             Rules.StringOpKind.STRING_OP_KIND_SLICE_TO -> expect(where, present, setOf("end"))
+
             else -> {
                 expect(where, present, setOf("text"))
                 constantText(where, op.text, nonEmpty = true)
@@ -517,6 +562,8 @@ internal class Loader private constructor(
         }
     }
 
+    // Each branch is one integer operation, and merging them would hide which parameters each declares.
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ComplexCondition")
     private fun integerParameters(op: Rules.IntegerOperation, where: String) {
         val present = buildSet {
             if (op.hasModulus()) add("modulus")
@@ -528,11 +575,14 @@ internal class Loader private constructor(
         }
         when (op.kind) {
             Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER -> expect(where, present, emptySet())
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_MOD_DIGITS,
             Rules.IntegerOpKind.INTEGER_OP_KIND_MODULO,
             Rules.IntegerOpKind.INTEGER_OP_KIND_COMPLEMENT,
             -> expect(where, present, setOf("modulus"))
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_REMAINDER_MAP -> expect(where, present, setOf("remainder_values"))
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_WEIGHTED_SUM -> {
                 val alignment = Rules.WeightAlignment.forNumber(op.alignmentValue)
                 if (alignment == null || alignment == Rules.WeightAlignment.WEIGHT_ALIGNMENT_UNSPECIFIED) {
@@ -551,6 +601,7 @@ internal class Loader private constructor(
                     expect(where, present, setOf("weights", "alignment", "mapping"))
                 }
             }
+
             else -> invalidRuleset(12, "$where declares an unknown integer operation")
         }
     }
@@ -569,12 +620,15 @@ internal class Loader private constructor(
         }
         when (op.kind) {
             Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_EQ -> expect(where, present, setOf("length"))
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_IN -> {
                 expect(where, present, setOf("lengths"))
                 requireAscending(where, op.lengthsList.map { it.toLong() }, "lengths")
             }
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_BETWEEN ->
                 expect(where, present, setOf("min_length", "max_length"))
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_CHARSET,
             Rules.PredicateOpKind.PREDICATE_OP_KIND_STARTS_WITH,
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ENDS_WITH,
@@ -583,6 +637,7 @@ internal class Loader private constructor(
                 expect(where, present, setOf("text"))
                 constantText(where, op.text, nonEmpty = true)
             }
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN -> {
                 expect(where, present, setOf("values"))
                 for (v in op.valuesList) constantText(where, v, nonEmpty = true)
@@ -591,15 +646,19 @@ internal class Loader private constructor(
                     invalidRuleset(12, "$where declares prefixes that are not sorted and deduplicated")
                 }
             }
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN -> {
                 expect(where, present, setOf("index", "text"))
                 constantText(where, op.text, nonEmpty = true)
             }
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_PROFILE_IS -> {
                 expect(where, present, setOf("text"))
                 if (op.text !in PROFILES) invalidRuleset(12, "$where names the profile ${op.text}")
             }
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_INTEGER_IS -> expect(where, present, setOf("constant"))
+
             else -> expect(where, present, emptySet())
         }
     }
@@ -627,20 +686,24 @@ internal class Loader private constructor(
                 expect(where, present, setOf("text"))
                 constantText(where, op.text, nonEmpty = true)
             }
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_REPLACE_PREFIX -> {
                 expect(where, present, setOf("text", "replacement"))
                 constantText(where, op.text, nonEmpty = true)
                 constantText(where, op.replacement, nonEmpty = false)
                 if (op.text == op.replacement) invalidRuleset(12, "$where replaces a prefix by itself")
             }
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_INSERT -> {
                 expect(where, present, setOf("index", "text"))
                 constantText(where, op.text, nonEmpty = true)
             }
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_LEFT_PAD -> {
                 expect(where, present, setOf("length", "text"))
                 if (Cp.count(op.text) != 1) invalidRuleset(12, "$where pads with ${Cp.count(op.text)} code points")
             }
+
             else -> expect(where, present, emptySet())
         }
     }
@@ -659,10 +722,13 @@ internal class Loader private constructor(
                     invalidRuleset(12, "$where asserts with reason ${op.reasonCodeValue}, which proves no invalidity")
                 }
             }
+
             else -> expect(where, present, emptySet())
         }
     }
 
+    // Each branch is one checksum operation, and merging them would hide which parameters each declares.
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ComplexCondition")
     private fun checksumParameters(op: Rules.ChecksumOperation, where: String) {
         val present = buildSet {
             if (op.hasIndex()) add("index")
@@ -678,11 +744,15 @@ internal class Loader private constructor(
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_LUHN,
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ISO7064_MOD97_10,
             -> expect(where, present, emptySet(), key)
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_DIGIT -> expect(where, present, setOf("index"), key)
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_SLICE ->
                 expect(where, present, setOf("start", "end"), key)
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_CONSTANT ->
                 expect(where, present, setOf("constant"), key)
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_UNSUPPORTED -> {
                 expect(where, present, setOf("reason_code"), key)
                 val reason = Rules.ReasonCode.forNumber(op.reasonCodeValue)
@@ -690,6 +760,7 @@ internal class Loader private constructor(
                     invalidRuleset(12, "$where declares the unsupported reason ${op.reasonCodeValue}")
                 }
             }
+
             else -> expect(where, present, emptySet(), key)
         }
     }
@@ -723,12 +794,17 @@ internal class Loader private constructor(
                 val where = "program ${p.id} node $index"
                 when (node.operationCase) {
                     Rules.Node.OperationCase.STRING_OPERATION -> stringBounds(node.stringOperation, where)
+
                     Rules.Node.OperationCase.INTEGER_OPERATION ->
                         integerBounds(node.integerOperation, where, lengths[node.getInputNodes(0)])
+
                     Rules.Node.OperationCase.PREDICATE_OPERATION -> predicateBounds(node.predicateOperation, where)
+
                     Rules.Node.OperationCase.CANONICALIZATION_OPERATION ->
                         canonicalizationBounds(node.canonicalizationOperation, where)
+
                     Rules.Node.OperationCase.CHECKSUM_OPERATION -> checksumBounds(node.checksumOperation, where)
+
                     else -> Unit
                 }
             }
@@ -755,7 +831,9 @@ internal class Loader private constructor(
             invalidRuleset(13, "$where declares min_length ${op.minLength} above max_length ${op.maxLength}")
         }
         for (v in op.lengthsList) sliceBound(where, "lengths entry", v)
-        if (op.hasConstant() && (op.constant < -Limits.MAX_COMPARISON_CONSTANT || op.constant > Limits.MAX_COMPARISON_CONSTANT)) {
+        if (op.hasConstant() &&
+            (op.constant < -Limits.MAX_COMPARISON_CONSTANT || op.constant > Limits.MAX_COMPARISON_CONSTANT)
+        ) {
             invalidRuleset(13, "$where compares against ${op.constant}, outside the comparison range")
         }
     }
@@ -780,7 +858,9 @@ internal class Loader private constructor(
                 invalidRuleset(13, "$where compares a slice of $width code points")
             }
         }
-        if (op.hasConstant() && (op.constant < -Limits.MAX_COMPARISON_CONSTANT || op.constant > Limits.MAX_COMPARISON_CONSTANT)) {
+        if (op.hasConstant() &&
+            (op.constant < -Limits.MAX_COMPARISON_CONSTANT || op.constant > Limits.MAX_COMPARISON_CONSTANT)
+        ) {
             invalidRuleset(13, "$where compares against ${op.constant}, outside the comparison range")
         }
     }
@@ -802,17 +882,21 @@ internal class Loader private constructor(
                             "above the ${Limits.MAX_DIGITS_TO_INTEGER} an int64 can hold",
                     )
                 }
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_MOD_DIGITS,
             Rules.IntegerOpKind.INTEGER_OP_KIND_MODULO,
             Rules.IntegerOpKind.INTEGER_OP_KIND_COMPLEMENT,
             -> modulus(where, op.modulus)
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_REMAINDER_MAP ->
                 if (op.remainderValuesCount < Limits.MIN_REMAINDER_VALUES ||
                     op.remainderValuesCount > Limits.MAX_REMAINDER_VALUES
                 ) {
                     invalidRuleset(13, "$where declares a remainder table of ${op.remainderValuesCount} entries")
                 }
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_WEIGHTED_SUM -> weightedSumBounds(op, where, operandMaxLength)
+
             else -> Unit
         }
     }
@@ -880,16 +964,22 @@ internal class Loader private constructor(
             }
             out[index] = when (op.kind) {
                 Rules.StringOpKind.STRING_OP_KIND_CONSTANT -> Cp.count(op.text).toLong()
+
                 Rules.StringOpKind.STRING_OP_KIND_COUNTRY_CODE -> 2
+
                 Rules.StringOpKind.STRING_OP_KIND_SLICE ->
                     if (op.end >= op.start) (op.end - op.start).toLong() else 0
+
                 Rules.StringOpKind.STRING_OP_KIND_SLICE_FROM ->
                     maxOf(0L, operand(0) - op.start.toLong())
+
                 Rules.StringOpKind.STRING_OP_KIND_SLICE_TO -> minOf(operand(0), op.end.toLong())
+
                 Rules.StringOpKind.STRING_OP_KIND_BEFORE_FIRST,
                 Rules.StringOpKind.STRING_OP_KIND_AFTER_FIRST,
                 Rules.StringOpKind.STRING_OP_KIND_STRIP_PREFIX,
                 -> operand(0)
+
                 Rules.StringOpKind.STRING_OP_KIND_CONCAT -> {
                     var sum = 0L
                     for (i in node.inputNodesList.indices) {
@@ -901,6 +991,7 @@ internal class Loader private constructor(
                     }
                     sum
                 }
+
                 else -> Limits.MAX_CANONICAL_CODE_POINTS
             }
         }
@@ -909,6 +1000,8 @@ internal class Loader private constructor(
 
     // -- 15 -----------------------------------------------------------------
 
+    // One statement per rule of check 15; splitting it would scatter a checklist the specification states as one.
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ComplexCondition")
     private fun check15Roots() {
         for (p in bundle.programsList) {
             val n = p.nodesCount
@@ -1061,12 +1154,14 @@ internal class Loader private constructor(
                     }
                     if (p.hasSubjectNode()) invalidRuleset(16, "canonicalization program ${p.id} declares a subject")
                 }
+
                 Rules.ProgramKind.PROGRAM_KIND_FORMAT ->
                     if (root.operationCase != Rules.Node.OperationCase.ASSERTION_OPERATION ||
                         root.assertionOperation.kind != Rules.AssertionOpKind.ASSERTION_OP_KIND_SEQUENCE
                     ) {
                         invalidRuleset(16, "format program ${p.id} does not root at an assertion sequence")
                     }
+
                 else ->
                     if (Nodes.isChecksumWhen(root)) {
                         invalidRuleset(16, "checksum program ${p.id} roots at a when branch")
@@ -1128,7 +1223,9 @@ internal class Loader private constructor(
                 ProgramRole.DEFINITION_CANONICALIZATION,
                 ProgramRole.GLOBAL_DEFINITION_CANONICALIZATION,
                 -> Rules.ProgramKind.PROGRAM_KIND_CANONICALIZATION
+
                 ProgramRole.FORMAT -> Rules.ProgramKind.PROGRAM_KIND_FORMAT
+
                 ProgramRole.CHECKSUM -> Rules.ProgramKind.PROGRAM_KIND_CHECKSUM
             }
             if (p.kind != expected) {
@@ -1137,35 +1234,42 @@ internal class Loader private constructor(
         }
     }
 
-    private fun categoryAllowed(kind: Rules.ProgramKind, node: Rules.Node): Boolean =
-        when (kind) {
-            Rules.ProgramKind.PROGRAM_KIND_CANONICALIZATION -> when (node.operationCase) {
-                Rules.Node.OperationCase.STRING_OPERATION -> !Nodes.isSubject(node)
-                Rules.Node.OperationCase.PREDICATE_OPERATION,
-                Rules.Node.OperationCase.CANONICALIZATION_OPERATION,
-                -> true
-                else -> false
-            }
-            Rules.ProgramKind.PROGRAM_KIND_FORMAT -> when (node.operationCase) {
-                Rules.Node.OperationCase.STRING_OPERATION,
-                Rules.Node.OperationCase.PREDICATE_OPERATION,
-                Rules.Node.OperationCase.ASSERTION_OPERATION,
-                -> true
-                Rules.Node.OperationCase.CALL_OPERATION ->
-                    node.callOperation.kind == Rules.CallOpKind.CALL_OP_KIND_FORMAT
-                else -> false
-            }
-            else -> when (node.operationCase) {
-                Rules.Node.OperationCase.STRING_OPERATION,
-                Rules.Node.OperationCase.PREDICATE_OPERATION,
-                Rules.Node.OperationCase.INTEGER_OPERATION,
-                Rules.Node.OperationCase.CHECKSUM_OPERATION,
-                -> true
-                Rules.Node.OperationCase.CALL_OPERATION ->
-                    node.callOperation.kind == Rules.CallOpKind.CALL_OP_KIND_CHECKSUM
-                else -> false
-            }
+    private fun categoryAllowed(kind: Rules.ProgramKind, node: Rules.Node): Boolean = when (kind) {
+        Rules.ProgramKind.PROGRAM_KIND_CANONICALIZATION -> when (node.operationCase) {
+            Rules.Node.OperationCase.STRING_OPERATION -> !Nodes.isSubject(node)
+
+            Rules.Node.OperationCase.PREDICATE_OPERATION,
+            Rules.Node.OperationCase.CANONICALIZATION_OPERATION,
+            -> true
+
+            else -> false
         }
+
+        Rules.ProgramKind.PROGRAM_KIND_FORMAT -> when (node.operationCase) {
+            Rules.Node.OperationCase.STRING_OPERATION,
+            Rules.Node.OperationCase.PREDICATE_OPERATION,
+            Rules.Node.OperationCase.ASSERTION_OPERATION,
+            -> true
+
+            Rules.Node.OperationCase.CALL_OPERATION ->
+                node.callOperation.kind == Rules.CallOpKind.CALL_OP_KIND_FORMAT
+
+            else -> false
+        }
+
+        else -> when (node.operationCase) {
+            Rules.Node.OperationCase.STRING_OPERATION,
+            Rules.Node.OperationCase.PREDICATE_OPERATION,
+            Rules.Node.OperationCase.INTEGER_OPERATION,
+            Rules.Node.OperationCase.CHECKSUM_OPERATION,
+            -> true
+
+            Rules.Node.OperationCase.CALL_OPERATION ->
+                node.callOperation.kind == Rules.CallOpKind.CALL_OP_KIND_CHECKSUM
+
+            else -> false
+        }
+    }
 
     // -- 17 -----------------------------------------------------------------
 
@@ -1245,11 +1349,12 @@ internal class Loader private constructor(
         if (s.isEmpty() || s.length > 64) return false
         if (s[0] !in 'a'..'z') return false
         for (i in 1 until s.length) {
-            val c = s[i]
-            if (!(c in 'a'..'z' || c in '0'..'9' || c == '_' || c == '-')) return false
+            if (!isKindCharacter(s[i])) return false
         }
         return true
     }
+
+    private fun isKindCharacter(c: Char) = c in 'a'..'z' || c in '0'..'9' || c == '_' || c == '-'
 
     private fun isCountryToken(s: String): Boolean = s.length == 2 && s[0] in 'A'..'Z' && s[1] in 'A'..'Z'
 
@@ -1276,6 +1381,8 @@ internal class Loader private constructor(
 
     // -- 19 -----------------------------------------------------------------
 
+    // Two nested loops over dispatchers and their aliases, which is the shape of the rule.
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ComplexCondition")
     private fun check19Dispatchers() {
         if (bundle.dispatchersCount > 0) used += Capabilities.IDENTIFIER_DISPATCH_V1
         val tokens = HashMap<String, String>()
@@ -1306,6 +1413,8 @@ internal class Loader private constructor(
 
     // -- 20 -----------------------------------------------------------------
 
+    // One loop over the aliases of each dispatcher, which is the shape of the rule.
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ComplexCondition")
     private fun check20CountryAliases() {
         for (d in bundle.dispatchersList) {
             val where = "dispatcher ${d.kind}"
@@ -1334,6 +1443,8 @@ internal class Loader private constructor(
 
     // -- 21 -----------------------------------------------------------------
 
+    // One statement per rule of check 21; splitting it would scatter a checklist the specification states as one.
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ComplexCondition")
     private fun check21Targets(): List<TargetRef> {
         val flat = ArrayList<TargetRef>()
         bundle.dispatchersList.forEachIndexed { dispatcherIndex, d ->

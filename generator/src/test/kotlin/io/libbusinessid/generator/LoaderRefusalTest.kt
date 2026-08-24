@@ -69,22 +69,33 @@ class LoaderRefusalTest {
 
         // -- 11: operands -------------------------------------------------------
         Mutation("a string constructor without its operand", 11) {
-            mutateNode({ it.hasStringOperation() && it.stringOperation.kind == Rules.StringOpKind.STRING_OP_KIND_SLICE }) {
+            mutateNode({
+                it.hasStringOperation() && it.stringOperation.kind == Rules.StringOpKind.STRING_OP_KIND_SLICE
+            }) {
                 clearInputNodes()
             }
         },
         Mutation("an integer constructor reading a string where it wants an integer", 11) {
-            mutateNode({ it.hasIntegerOperation() && it.integerOperation.kind == Rules.IntegerOpKind.INTEGER_OP_KIND_MODULO }) {
+            mutateNode({
+                it.hasIntegerOperation() &&
+                    it.integerOperation.kind == Rules.IntegerOpKind.INTEGER_OP_KIND_MODULO
+            }) {
                 clearInputNodes().addInputNodes(0)
             }
         },
         Mutation("a predicate with two operands where it takes one", 11) {
-            mutateNode({ it.hasPredicateOperation() && it.predicateOperation.kind == Rules.PredicateOpKind.PREDICATE_OP_KIND_CONTAINS }) {
+            mutateNode({
+                it.hasPredicateOperation() &&
+                    it.predicateOperation.kind == Rules.PredicateOpKind.PREDICATE_OP_KIND_CONTAINS
+            }) {
                 addInputNodes(0)
             }
         },
         Mutation("an equality with a single operand", 11) {
-            mutateNode({ it.hasPredicateOperation() && it.predicateOperation.kind == Rules.PredicateOpKind.PREDICATE_OP_KIND_EQUALS }) {
+            mutateNode({
+                it.hasPredicateOperation() &&
+                    it.predicateOperation.kind == Rules.PredicateOpKind.PREDICATE_OP_KIND_EQUALS
+            }) {
                 clearInputNodes().addInputNodes(0)
             }
         },
@@ -92,31 +103,48 @@ class LoaderRefusalTest {
             onProgram(2) { setNodes(rootNode, Rules.Node.newBuilder(getNodes(rootNode)).addInputNodes(0)) }
         },
         Mutation("a conditional step without any step to apply", 11) {
-            mutateNode({ it.hasCanonicalizationOperation() && it.canonicalizationOperation.kind == Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN }) {
+            mutateNode({
+                it.hasCanonicalizationOperation() &&
+                    it.canonicalizationOperation.kind == Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN
+            }) {
                 clearInputNodes().addInputNodes(1)
             }
         },
         Mutation("a conditional step whose first operand is not a predicate", 11) {
-            mutateNode({ it.hasCanonicalizationOperation() && it.canonicalizationOperation.kind == Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN }) {
+            mutateNode({
+                it.hasCanonicalizationOperation() &&
+                    it.canonicalizationOperation.kind == Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN
+            }) {
                 clearInputNodes().addInputNodes(0).addInputNodes(2)
             }
         },
         Mutation("a conditional step whose trailing operand is not a step", 11) {
-            mutateNode({ it.hasCanonicalizationOperation() && it.canonicalizationOperation.kind == Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN }) {
+            mutateNode({
+                it.hasCanonicalizationOperation() &&
+                    it.canonicalizationOperation.kind == Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN
+            }) {
                 clearInputNodes().addInputNodes(1).addInputNodes(0)
             }
         },
         Mutation("an assertion sequence holding a predicate", 11) {
-            onProgram(3) { setNodes(rootNode, Rules.Node.newBuilder(getNodes(rootNode)).clearInputNodes().addInputNodes(1)) }
+            onProgram(3) {
+                setNodes(rootNode, Rules.Node.newBuilder(getNodes(rootNode)).clearInputNodes().addInputNodes(1))
+            }
         },
         Mutation("a checksum comparison with its operands the wrong way round", 11) {
-            mutateNode({ it.hasChecksumOperation() && it.checksumOperation.kind == Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_DIGIT }) {
+            mutateNode({
+                it.hasChecksumOperation() &&
+                    it.checksumOperation.kind == Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_DIGIT
+            }) {
                 val operands = inputNodesList.toList()
                 clearInputNodes().addInputNodes(operands[1]).addInputNodes(operands[0])
             }
         },
         Mutation("a choose with no branch at all", 11) {
-            mutateNode({ it.hasChecksumOperation() && it.checksumOperation.kind == Rules.ChecksumOpKind.CHECKSUM_OP_KIND_CHOOSE }) {
+            mutateNode({
+                it.hasChecksumOperation() &&
+                    it.checksumOperation.kind == Rules.ChecksumOpKind.CHECKSUM_OP_KIND_CHOOSE
+            }) {
                 clearInputNodes()
             }
         },
@@ -354,7 +382,10 @@ class LoaderRefusalTest {
         },
         Mutation("digits_to_integer over a view nothing bounds", 13) {
             onInteger(Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER) { }
-            mutateNode({ it.hasIntegerOperation() && it.integerOperation.kind == Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER }) {
+            mutateNode({
+                it.hasIntegerOperation() &&
+                    it.integerOperation.kind == Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER
+            }) {
                 clearInputNodes().addInputNodes(0)
             }
         },
@@ -843,16 +874,15 @@ class LoaderRefusalTest {
     }
 
     @TestFactory
-    fun `each rule refuses on its own`(): List<DynamicTest> =
-        mutations().map { mutation ->
-            DynamicTest.dynamicTest("${mutation.name} (check ${mutation.check})") {
-                val builder = KitchenSink.bundle().toBuilder().apply(mutation.apply)
-                val failure = assertFailsWith<RulesetException> { Loader.load(builder.build().toByteArray()) }
-                assertEquals(
-                    mutation.check,
-                    failure.check,
-                    "refused at check ${failure.check}: ${failure.message}",
-                )
-            }
+    fun `each rule refuses on its own`(): List<DynamicTest> = mutations().map { mutation ->
+        DynamicTest.dynamicTest("${mutation.name} (check ${mutation.check})") {
+            val builder = KitchenSink.bundle().toBuilder().apply(mutation.apply)
+            val failure = assertFailsWith<RulesetException> { Loader.load(builder.build().toByteArray()) }
+            assertEquals(
+                mutation.check,
+                failure.check,
+                "refused at check ${failure.check}: ${failure.message}",
+            )
         }
+    }
 }

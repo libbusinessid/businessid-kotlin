@@ -13,15 +13,17 @@ config:
   warningsAsErrors: true
 
 comments:
+  # Benchmarks are measurement harnesses, not API: their names are their
+  # documentation and the class above them carries the explanation.
   UndocumentedPublicClass:
     active: true
-    excludes: ['**/test/**', '**/generated/**']
+    excludes: ['**/test/**', '**/generated/**', '**/benchmarks/**']
   UndocumentedPublicFunction:
     active: true
-    excludes: ['**/test/**', '**/generated/**']
+    excludes: ['**/test/**', '**/generated/**', '**/benchmarks/**']
   UndocumentedPublicProperty:
     active: true
-    excludes: ['**/test/**', '**/generated/**']
+    excludes: ['**/test/**', '**/generated/**', '**/benchmarks/**']
 
 complexity:
   LongMethod:
@@ -36,6 +38,12 @@ complexity:
     excludes: ['**/test/**', '**/generated/**']
   TooManyFunctions:
     excludes: ['**/test/**', '**/generated/**']
+    # An IR primitive table holds one function per opcode, and splitting it by
+    # count rather than by meaning would make it harder to read, not easier.
+    thresholdInFiles: 24
+    thresholdInClasses: 20
+    thresholdInObjects: 20
+    thresholdInInterfaces: 20
   ComplexCondition:
     excludes: ['**/test/**', '**/generated/**']
   MethodOverloading:

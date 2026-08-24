@@ -61,10 +61,9 @@ object KitchenSink {
             .setOutputType(Rules.ValueType.VALUE_TYPE_CHECKSUM_OUTCOME)
             .setChecksumOperation(Rules.ChecksumOperation.newBuilder().setKind(kind).apply(build))
 
-    private fun call(kind: Rules.CallOpKind, program: Int, output: Rules.ValueType) =
-        Rules.Node.newBuilder()
-            .setOutputType(output)
-            .setCallOperation(Rules.CallOperation.newBuilder().setKind(kind).setProgramId(program))
+    private fun call(kind: Rules.CallOpKind, program: Int, output: Rules.ValueType) = Rules.Node.newBuilder()
+        .setOutputType(output)
+        .setCallOperation(Rules.CallOperation.newBuilder().setKind(kind).setProgramId(program))
 
     /** Program 1: the pre-canonicalisation program, restricted to its five operations. */
     private fun preCanonicalization(): Rules.Program {
@@ -91,10 +90,12 @@ object KitchenSink {
     private fun countryCanonicalization(): Rules.Program {
         val n = Nodes()
         val value = n.add(string(Rules.StringOpKind.STRING_OP_KIND_VALUE))
-        val isShort = n.add(predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_BETWEEN) {
-            minLength = 0
-            maxLength = 3
-        }.addInputNodes(value))
+        val isShort = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_BETWEEN) {
+                minLength = 0
+                maxLength = 3
+            }.addInputNodes(value),
+        )
         val pad = n.add(
             canonicalization(Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_LEFT_PAD) {
                 length = 4
@@ -171,7 +172,12 @@ object KitchenSink {
         val value = n.add(string(Rules.StringOpKind.STRING_OP_KIND_VALUE))
         val constant = n.add(string(Rules.StringOpKind.STRING_OP_KIND_CONSTANT) { text = "Z" })
         val country = n.add(string(Rules.StringOpKind.STRING_OP_KIND_COUNTRY_CODE))
-        val head = n.add(string(Rules.StringOpKind.STRING_OP_KIND_SLICE) { start = 0; end = 2 }.addInputNodes(subject))
+        val head = n.add(
+            string(Rules.StringOpKind.STRING_OP_KIND_SLICE) {
+                start = 0
+                end = 2
+            }.addInputNodes(subject),
+        )
         val tail = n.add(string(Rules.StringOpKind.STRING_OP_KIND_SLICE_FROM) { start = 2 }.addInputNodes(subject))
         val front = n.add(string(Rules.StringOpKind.STRING_OP_KIND_SLICE_TO) { end = 2 }.addInputNodes(subject))
         val before = n.add(string(Rules.StringOpKind.STRING_OP_KIND_BEFORE_FIRST) { text = "Z" }.addInputNodes(value))
@@ -199,21 +205,28 @@ object KitchenSink {
         val equal = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_EQUALS).addInputNodes(head).addInputNodes(front),
         )
-        val lengthEq = n.add(predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_EQ) { length = 8 }
-            .addInputNodes(subject))
+        val lengthEq = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_EQ) { length = 8 }
+                .addInputNodes(subject),
+        )
         val lengthIn = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_IN) { addAllLengths(listOf(6, 8, 10)) }
                 .addInputNodes(subject),
         )
         val lengthBetween = n.add(
-            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_BETWEEN) { minLength = 1; maxLength = 40 }
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_BETWEEN) {
+                minLength = 1
+                maxLength = 40
+            }
                 .addInputNodes(subject),
         )
         val upper = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_UPPER_LETTERS).addInputNodes(country),
         )
-        val alnum = n.add(predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_ALPHANUMERIC)
-            .addInputNodes(subject))
+        val alnum = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_ALPHANUMERIC)
+                .addInputNodes(subject),
+        )
         val charset = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_CHARSET) { text = "0123456789PSZ" }
                 .addInputNodes(subject),
@@ -229,7 +242,10 @@ object KitchenSink {
                 .addInputNodes(value),
         )
         val charAtIn = n.add(
-            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN) { index = 0; text = "PZ" }
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN) {
+                index = 0
+                text = "PZ"
+            }
                 .addInputNodes(value),
         )
         val contains = n.add(
@@ -276,8 +292,10 @@ object KitchenSink {
                 reasonCode = Rules.ReasonCode.REASON_CODE_INVALID_FORMAT
             }.addInputNodes(all),
         )
-        val called = n.add(call(Rules.CallOpKind.CALL_OP_KIND_FORMAT, 3, Rules.ValueType.VALUE_TYPE_ASSERTION)
-            .addInputNodes(tail))
+        val called = n.add(
+            call(Rules.CallOpKind.CALL_OP_KIND_FORMAT, 3, Rules.ValueType.VALUE_TYPE_ASSERTION)
+                .addInputNodes(tail),
+        )
         val root = n.add(
             assertion(Rules.AssertionOpKind.ASSERTION_OP_KIND_SEQUENCE)
                 .addInputNodes(requireNotEmpty).addInputNodes(requireShape).addInputNodes(called),
@@ -311,10 +329,20 @@ object KitchenSink {
     private fun checksumProgram(): Rules.Program {
         val n = Nodes()
         val subject = n.add(string(Rules.StringOpKind.STRING_OP_KIND_SUBJECT))
-        val body = n.add(string(Rules.StringOpKind.STRING_OP_KIND_SLICE) { start = 0; end = 6 }
-            .addInputNodes(subject))
-        val short = n.add(string(Rules.StringOpKind.STRING_OP_KIND_SLICE) { start = 0; end = 4 }
-            .addInputNodes(subject))
+        val body = n.add(
+            string(Rules.StringOpKind.STRING_OP_KIND_SLICE) {
+                start = 0
+                end = 6
+            }
+                .addInputNodes(subject),
+        )
+        val short = n.add(
+            string(Rules.StringOpKind.STRING_OP_KIND_SLICE) {
+                start = 0
+                end = 4
+            }
+                .addInputNodes(subject),
+        )
 
         val digitsToInteger = n.add(
             integer(Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER).addInputNodes(short),
@@ -344,10 +372,14 @@ object KitchenSink {
                 alphabet = "0123456789ABCDEFGHJKLMNPQRTUWXY"
             }.addInputNodes(body),
         )
-        val modulo = n.add(integer(Rules.IntegerOpKind.INTEGER_OP_KIND_MODULO) { modulus = 11 }
-            .addInputNodes(leftSum))
-        val complement = n.add(integer(Rules.IntegerOpKind.INTEGER_OP_KIND_COMPLEMENT) { modulus = 11 }
-            .addInputNodes(modulo))
+        val modulo = n.add(
+            integer(Rules.IntegerOpKind.INTEGER_OP_KIND_MODULO) { modulus = 11 }
+                .addInputNodes(leftSum),
+        )
+        val complement = n.add(
+            integer(Rules.IntegerOpKind.INTEGER_OP_KIND_COMPLEMENT) { modulus = 11 }
+                .addInputNodes(modulo),
+        )
         val remainder = n.add(
             integer(Rules.IntegerOpKind.INTEGER_OP_KIND_REMAINDER_MAP) {
                 addAllRemainderValues(listOf(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 0L, 1L))
@@ -364,7 +396,10 @@ object KitchenSink {
             }.addInputNodes(remainder).addInputNodes(subject),
         )
         val compareSlice = n.add(
-            checksum(Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_SLICE) { start = 6; end = 8 }
+            checksum(Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_SLICE) {
+                start = 6
+                end = 8
+            }
                 .addInputNodes(digitsToInteger).addInputNodes(subject),
         )
         val compareConstant = n.add(
@@ -444,96 +479,94 @@ object KitchenSink {
             .build()
     }
 
-    private fun source(id: String, tier: Rules.SourceTier) =
-        Rules.Source.newBuilder()
-            .setId(id)
-            .setUrl("https://example.invalid/$id")
-            .setAuthority("Kitchen sink")
-            .setTitle("Every operation of the IR")
-            .setAccessedAt("2026-08-24")
-            .setJurisdiction("GLOBAL")
-            .setLanguage("en")
-            .setNotes("A shape, not a rule.")
-            .setLicenseOrTerms("Apache-2.0")
-            .setTier(tier)
-            .build()
+    private fun source(id: String, tier: Rules.SourceTier) = Rules.Source.newBuilder()
+        .setId(id)
+        .setUrl("https://example.invalid/$id")
+        .setAuthority("Kitchen sink")
+        .setTitle("Every operation of the IR")
+        .setAccessedAt("2026-08-24")
+        .setJurisdiction("GLOBAL")
+        .setLanguage("en")
+        .setNotes("A shape, not a rule.")
+        .setLicenseOrTerms("Apache-2.0")
+        .setTier(tier)
+        .build()
 
     /** The ruleset. Every check accepts it, and every opcode appears in it. */
-    fun bundle(): Rules.RuleBundle =
-        Rules.RuleBundle.newBuilder()
-            .setFormatVersion(1)
-            .setRulesVersion("2026.08.0")
-            .addAllRequiredFeatureIds(listOf(1, 2, 3, 4, 5, 10, 11, 20, 21, 30, 31, 32, 33, 34, 35, 40, 41, 42))
-            .setSourceDigest(ByteString.copyFrom(ByteArray(32) { it.toByte() }))
-            .addIdentifiers(
-                Rules.IdentifierDefinition.newBuilder()
-                    .setId(1)
-                    .setKind("demo")
-                    .setCountryCode("BE")
-                    .setCanonicalizationProgram(2)
-                    .setFormatProgram(4)
-                    .setChecksumProgram(6)
-                    .setDefaultProfile("strict_current")
-                    .addSources(source("kitchen-a", Rules.SourceTier.SOURCE_TIER_PRIMARY))
-                    .addSources(source("kitchen-b", Rules.SourceTier.SOURCE_TIER_SECONDARY)),
-            )
-            .addIdentifiers(
-                Rules.IdentifierDefinition.newBuilder()
-                    .setId(2)
-                    .setKind("demo")
-                    .setCountryCode("FR")
-                    .setCanonicalizationProgram(2)
-                    .setFormatProgram(4)
-                    .setDefaultProfile("compatible")
-                    .setAbsentChecksumReason(Rules.ReasonCode.REASON_CODE_UNSUPPORTED_CHECKSUM)
-                    .addSources(source("kitchen-c", Rules.SourceTier.SOURCE_TIER_UNSPECIFIED)),
-            )
-            .addIdentifiers(
-                Rules.IdentifierDefinition.newBuilder()
-                    .setId(3)
-                    .setKind("glob")
-                    .setCanonicalizationProgram(1)
-                    .setFormatProgram(3)
-                    .setDefaultProfile("compatible")
-                    .setAbsentChecksumReason(Rules.ReasonCode.REASON_CODE_CHECKSUM_NOT_PUBLISHED)
-                    .addSources(source("kitchen-d", Rules.SourceTier.SOURCE_TIER_PRIMARY)),
-            )
-            .addPrograms(preCanonicalization())
-            .addPrograms(countryCanonicalization())
-            .addPrograms(calledFormat())
-            .addPrograms(format())
-            .addPrograms(calledChecksum())
-            .addPrograms(checksumProgram())
-            .addDispatchers(
-                Rules.IdentifierDispatcher.newBuilder()
-                    .setKind("demo")
-                    .addKindAliases("demo_alias")
-                    .addKindAliases("demonstration")
-                    .setPreCanonicalizationProgram(1)
-                    .addCountryAliases(Rules.CountryAlias.newBuilder().setAlias("UK").setCountryCode("BE"))
-                    .addTargets(
-                        Rules.DispatchTarget.newBuilder()
-                            .setCountryCode("BE")
-                            .addAcceptedPrefixes("BE")
-                            .addAcceptedPrefixes("PBE")
-                            .setCanonicalPrefix("BE")
-                            .setIdentifierDefinitionId(1)
-                            .setAllowUnprefixedWithoutCountry(true),
-                    )
-                    .addTargets(
-                        Rules.DispatchTarget.newBuilder()
-                            .setCountryCode("FR")
-                            .addAcceptedPrefixes("FR")
-                            .setIdentifierDefinitionId(2),
-                    ),
-            )
-            .addDispatchers(
-                Rules.IdentifierDispatcher.newBuilder()
-                    .setKind("glob")
-                    .setPreCanonicalizationProgram(1)
-                    .addTargets(Rules.DispatchTarget.newBuilder().setIdentifierDefinitionId(3)),
-            )
-            .build()
+    fun bundle(): Rules.RuleBundle = Rules.RuleBundle.newBuilder()
+        .setFormatVersion(1)
+        .setRulesVersion("2026.08.0")
+        .addAllRequiredFeatureIds(listOf(1, 2, 3, 4, 5, 10, 11, 20, 21, 30, 31, 32, 33, 34, 35, 40, 41, 42))
+        .setSourceDigest(ByteString.copyFrom(ByteArray(32) { it.toByte() }))
+        .addIdentifiers(
+            Rules.IdentifierDefinition.newBuilder()
+                .setId(1)
+                .setKind("demo")
+                .setCountryCode("BE")
+                .setCanonicalizationProgram(2)
+                .setFormatProgram(4)
+                .setChecksumProgram(6)
+                .setDefaultProfile("strict_current")
+                .addSources(source("kitchen-a", Rules.SourceTier.SOURCE_TIER_PRIMARY))
+                .addSources(source("kitchen-b", Rules.SourceTier.SOURCE_TIER_SECONDARY)),
+        )
+        .addIdentifiers(
+            Rules.IdentifierDefinition.newBuilder()
+                .setId(2)
+                .setKind("demo")
+                .setCountryCode("FR")
+                .setCanonicalizationProgram(2)
+                .setFormatProgram(4)
+                .setDefaultProfile("compatible")
+                .setAbsentChecksumReason(Rules.ReasonCode.REASON_CODE_UNSUPPORTED_CHECKSUM)
+                .addSources(source("kitchen-c", Rules.SourceTier.SOURCE_TIER_UNSPECIFIED)),
+        )
+        .addIdentifiers(
+            Rules.IdentifierDefinition.newBuilder()
+                .setId(3)
+                .setKind("glob")
+                .setCanonicalizationProgram(1)
+                .setFormatProgram(3)
+                .setDefaultProfile("compatible")
+                .setAbsentChecksumReason(Rules.ReasonCode.REASON_CODE_CHECKSUM_NOT_PUBLISHED)
+                .addSources(source("kitchen-d", Rules.SourceTier.SOURCE_TIER_PRIMARY)),
+        )
+        .addPrograms(preCanonicalization())
+        .addPrograms(countryCanonicalization())
+        .addPrograms(calledFormat())
+        .addPrograms(format())
+        .addPrograms(calledChecksum())
+        .addPrograms(checksumProgram())
+        .addDispatchers(
+            Rules.IdentifierDispatcher.newBuilder()
+                .setKind("demo")
+                .addKindAliases("demo_alias")
+                .addKindAliases("demonstration")
+                .setPreCanonicalizationProgram(1)
+                .addCountryAliases(Rules.CountryAlias.newBuilder().setAlias("UK").setCountryCode("BE"))
+                .addTargets(
+                    Rules.DispatchTarget.newBuilder()
+                        .setCountryCode("BE")
+                        .addAcceptedPrefixes("BE")
+                        .addAcceptedPrefixes("PBE")
+                        .setCanonicalPrefix("BE")
+                        .setIdentifierDefinitionId(1)
+                        .setAllowUnprefixedWithoutCountry(true),
+                )
+                .addTargets(
+                    Rules.DispatchTarget.newBuilder()
+                        .setCountryCode("FR")
+                        .addAcceptedPrefixes("FR")
+                        .setIdentifierDefinitionId(2),
+                ),
+        )
+        .addDispatchers(
+            Rules.IdentifierDispatcher.newBuilder()
+                .setKind("glob")
+                .setPreCanonicalizationProgram(1)
+                .addTargets(Rules.DispatchTarget.newBuilder().setIdentifierDefinitionId(3)),
+        )
+        .build()
 
     fun bytes(): ByteArray = bundle().toByteArray()
 }
