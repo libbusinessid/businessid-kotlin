@@ -305,6 +305,13 @@ fun consumerTask(name: String, directory: String, arguments: List<String>) = tas
             "-Pbusinessid.repository=$repository",
             "--no-daemon",
             "--console=plain",
+            // The nested build is not allowed to replay a verdict. These
+            // projects exist to prove the published artefact is consumable, and
+            // an up to date test proves that of some earlier artefact. Task
+            // level `--rerun` cannot do it: the arguments below are lifecycle
+            // tasks, and `--rerun` reaches the task it follows rather than what
+            // that task depends on.
+            "--rerun-tasks",
         ) + arguments,
     )
 }

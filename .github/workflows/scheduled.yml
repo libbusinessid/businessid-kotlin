@@ -148,7 +148,14 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       # Compile, test, cover and package across the range, which is what this
-      # job exists to prove. Not `build`: that pulls in `check`, and `check`
+      # job exists to prove. Not `./scripts/verify.sh` either, though that is the
+      # entry point everywhere else: verify runs the analysers, and the analysers
+      # are exactly what cannot run here. This job is the one place where a
+      # narrower command is the honest one, and it is narrower by omission rather
+      # than by disagreement — every check it drops is run by verify on the JDK
+      # this project pins.
+      #
+      # Not `build`: that pulls in `check`, and `check`
       # runs detekt and ktlint, neither of which can run in a daemon JVM newer
       # than the release they were built against — detekt 1.23.8 stops with the
       # bare version number before reading a line. SPEC-ISSUES.md records it,

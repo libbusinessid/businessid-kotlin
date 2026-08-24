@@ -5,6 +5,7 @@ package io.libbusinessid
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -92,6 +93,20 @@ class ReadmeTest {
             .count { it.isNotBlank() }
         assertTrue("$cases of $cases cases matched" in readme, "the README states another conformance count")
         assertTrue("$cases cases, $cases matched, 0 differed" in readme)
+        // The sample line of `verify.sh`. Its test count and jar size are
+        // illustrative and move with any change, but the two figures that can be
+        // checked cheaply are checked, because a README figure repeated by hand
+        // has gone stale here before.
+        val verifyLine = readme.lineSequence().firstOrNull { it.startsWith("verify ok") }
+        assertNotNull(verifyLine, "the README should show what verify.sh prints")
+        assertTrue(
+            "rules ${info.rulesVersion} " in verifyLine!!,
+            "the sample verify line names another rules version: $verifyLine",
+        )
+        assertTrue(
+            "conformance $cases/$cases " in verifyLine,
+            "the sample verify line states another conformance tally: $verifyLine",
+        )
     }
 
     @Test

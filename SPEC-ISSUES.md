@@ -9,8 +9,31 @@ and the whole corpus passes under it.
 
 ## Open
 
-Nothing. The three questions this engine raised against rules `2026.08.26` were
-all settled in `2026.08.31`; they are below, with what changed.
+### `engine.md` numbers two different sections 12.5
+
+**Measured.** At `2026.08.32` the document carries both
+
+```text
+### 12.5 Mutation testing
+## 12.5 Une seule commande, silencieuse quand tout passe
+```
+
+They are different sections at different depths, and the second was added by the
+change that introduced the single entry point. A citation of "section 12.5" is
+now ambiguous, and this repository has to make one: `CLAUDE.md` and `README.md`
+both point at 12.5 for the entry point, while `README.md` already pointed at 12.2
+for the coverage split from the same run of subsections.
+
+**What this engine does.** It reads 12.5 as the entry point section, because that
+is the one the sentence about `CLAUDE.md` belongs to, and cites mutation testing
+by name rather than by number where it needs to. Nothing depends on the number
+being right, so this is a documentation defect and not a behavioural question.
+
+**Proposed.** Renumber the new section, or renumber mutation testing — either
+way, one number per section.
+
+The three questions this engine raised against rules `2026.08.26` were all
+settled in `2026.08.31`; they are below, with what changed.
 
 ## Not a specification question, recorded because it shapes the build
 
