@@ -4,7 +4,6 @@
 package io.libbusinessid.runtime
 
 import io.libbusinessid.ReasonCode
-import io.libbusinessid.StepStatus
 
 /**
  * The checksum primitives shared by the emitted rules.
@@ -98,9 +97,9 @@ internal object Ck {
         var firstUnsupported: ChecksumOutcome? = null
         for (b in branches) {
             when (b.status) {
-                StepStatus.INVALID -> return b
-                StepStatus.UNSUPPORTED -> if (firstUnsupported == null) firstUnsupported = b
-                else -> Unit
+                ChecksumStatus.INVALID -> return b
+                ChecksumStatus.UNSUPPORTED -> if (firstUnsupported == null) firstUnsupported = b
+                ChecksumStatus.VALID -> Unit
             }
         }
         return firstUnsupported ?: ChecksumOutcome.VALID
@@ -116,10 +115,9 @@ internal object Ck {
         var firstInvalid: ChecksumOutcome? = null
         for (b in branches) {
             when (b.status) {
-                StepStatus.VALID -> return ChecksumOutcome.VALID
-                StepStatus.UNSUPPORTED -> if (firstUnsupported == null) firstUnsupported = b
-                StepStatus.INVALID -> if (firstInvalid == null) firstInvalid = b
-                else -> Unit
+                ChecksumStatus.VALID -> return ChecksumOutcome.VALID
+                ChecksumStatus.UNSUPPORTED -> if (firstUnsupported == null) firstUnsupported = b
+                ChecksumStatus.INVALID -> if (firstInvalid == null) firstInvalid = b
             }
         }
         return firstUnsupported ?: firstInvalid ?: ChecksumOutcome.unsupported(null)

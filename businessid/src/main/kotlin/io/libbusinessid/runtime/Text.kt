@@ -134,15 +134,18 @@ internal object Txt {
     @JvmStatic
     internal fun concat(parts: Array<CpView?>): CpView? {
         var total = 0
+        // The operands are collected as they are checked, so the copy below has
+        // no null case left to handle — and therefore no branch no input takes.
+        val present = ArrayList<CpView>(parts.size)
         for (p in parts) {
             if (p == null) return null
+            present += p
             total += p.length
         }
         val out = IntArray(total)
         var at = 0
-        for (p in parts) {
-            if (p == null) return null
-            for (i in 0 until p.length) out[at++] = p[i]
+        for (v in present) {
+            for (i in 0 until v.length) out[at++] = v[i]
         }
         return CpView(out, 0, total)
     }

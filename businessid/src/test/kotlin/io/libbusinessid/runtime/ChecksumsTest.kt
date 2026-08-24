@@ -4,7 +4,6 @@
 package io.libbusinessid.runtime
 
 import io.libbusinessid.ReasonCode
-import io.libbusinessid.StepStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -17,19 +16,19 @@ import org.junit.jupiter.api.Test
  */
 class ChecksumsTest {
     private fun assertValid(outcome: ChecksumOutcome) {
-        assertEquals(StepStatus.VALID, outcome.status)
+        assertEquals(ChecksumStatus.VALID, outcome.status)
         assertEquals(ReasonCode.OK, outcome.reason)
         assertNull(outcome.messageKey, "a valid outcome carries no key: a rule declares none for succeeding")
     }
 
     private fun assertInvalid(outcome: ChecksumOutcome, key: String? = null) {
-        assertEquals(StepStatus.INVALID, outcome.status)
+        assertEquals(ChecksumStatus.INVALID, outcome.status)
         assertEquals(ReasonCode.INVALID_CHECKSUM, outcome.reason)
         assertEquals(key, outcome.messageKey)
     }
 
     private fun assertUnsupported(outcome: ChecksumOutcome, reason: ReasonCode = ReasonCode.UNSUPPORTED_CHECKSUM) {
-        assertEquals(StepStatus.UNSUPPORTED, outcome.status)
+        assertEquals(ChecksumStatus.UNSUPPORTED, outcome.status)
         assertEquals(reason, outcome.reason)
     }
 
@@ -123,6 +122,10 @@ class ChecksumsTest {
         assertValid(Ck.anyCheck(arrayOf(invalidA, valid)))
         assertEquals("u", Ck.anyCheck(arrayOf(invalidA, unsupported)).messageKey)
         assertEquals("a", Ck.anyCheck(arrayOf(invalidA, invalidA)).messageKey)
+        // The first of each kind wins, so a second one changes nothing.
+        val second = Ck.declaredUnsupported(ReasonCode.CHECKSUM_NOT_PUBLISHED, "second")
+        assertEquals("u", Ck.anyCheck(arrayOf(unsupported, second)).messageKey)
+        assertEquals("u", Ck.allChecks(arrayOf(unsupported, second)).messageKey)
     }
 
     @Test
@@ -131,9 +134,42 @@ class ChecksumsTest {
     }
 
     @Test
+    fun `an empty combination is unsupported rather than valid`() {
+        // No rule emits one, but the shape has to have an answer, and the safe
+        // answer is the one that proves nothing.
+        assertValid(Ck.allChecks(emptyArray()))
+        assertUnsupported(Ck.anyCheck(emptyArray()))
+    }
+
+    @Test
+    fun `any_check falls back to the first invalid only when nothing is unsupported`() {
+        val invalidA = Ck.compareConstant(1L, 0L, "a")
+        val invalidB = Ck.compareConstant(2L, 0L, "b")
+        assertEquals("a", Ck.anyCheck(arrayOf(invalidA, invalidB)).messageKey)
+        assertEquals("a", Ck.allChecks(arrayOf(invalidA, invalidB)).messageKey)
+    }
+
+    @Test
+    fun `the three states map onto the steps of the report`() {
+        assertEquals(io.libbusinessid.StepStatus.VALID, ChecksumStatus.VALID.step)
+        assertEquals(io.libbusinessid.StepStatus.INVALID, ChecksumStatus.INVALID.step)
+        assertEquals(io.libbusinessid.StepStatus.UNSUPPORTED, ChecksumStatus.UNSUPPORTED.step)
+    }
+
+    @Test
+    fun `a keyed unsupported outcome is distinct from the shared unkeyed one`() {
+        assertEquals(null, Ck.luhn(null, null).messageKey)
+        assertEquals("k", Ck.luhn(null, "k").messageKey)
+        assertEquals(
+            ReasonCode.UNSUPPORTED_CHECKSUM,
+            Ck.declaredUnsupported(ReasonCode.UNSUPPORTED_CHECKSUM, null).reason,
+        )
+    }
+
+    @Test
     fun `an unsupported checksum never becomes invalid, whatever it is combined with`() {
         val unsupported = Ck.declaredUnsupported(ReasonCode.CHECKSUM_NOT_PUBLISHED, null)
-        assertEquals(StepStatus.UNSUPPORTED, Ck.allChecks(arrayOf(unsupported)).status)
-        assertEquals(StepStatus.UNSUPPORTED, Ck.anyCheck(arrayOf(unsupported)).status)
+        assertEquals(ChecksumStatus.UNSUPPORTED, Ck.allChecks(arrayOf(unsupported)).status)
+        assertEquals(ChecksumStatus.UNSUPPORTED, Ck.anyCheck(arrayOf(unsupported)).status)
     }
 }

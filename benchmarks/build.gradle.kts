@@ -21,6 +21,7 @@ val jmhGeneratorClasspath: Configuration by configurations.creating
 dependencies {
     jmhGeneratorClasspath(libs.jmh.core)
     jmhGeneratorClasspath(libs.jmh.generator)
+    jmhGeneratorClasspath(libs.jmh.generator.bytecode)
 }
 
 val jmhGeneratedSources = layout.buildDirectory.dir("jmh-generated/sources")
@@ -34,15 +35,13 @@ val jmhGenerate = tasks.register<JavaExec>("jmhGenerate") {
             sourceSets.main.get().output +
             sourceSets.main.get().runtimeClasspath
     mainClass.set("org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator")
-    val classesDir = sourceSets.main.get().output.classesDirs.singleFile
-    argumentProviders.add(
-        CommandLineArgumentProvider {
-            listOf(
-                classesDir.absolutePath,
-                jmhGeneratedSources.get().asFile.absolutePath,
-                jmhGeneratedResources.get().asFile.absolutePath,
-            )
-        },
+    // Kotlin and Java each get their own output directory; the benchmarks are
+    // Kotlin, so that is the one the generator reads.
+    val classesDir = layout.buildDirectory.dir("classes/kotlin/main").get().asFile
+    args(
+        classesDir.absolutePath,
+        jmhGeneratedSources.get().asFile.absolutePath,
+        jmhGeneratedResources.get().asFile.absolutePath,
     )
     outputs.dir(jmhGeneratedSources)
     outputs.dir(jmhGeneratedResources)
@@ -73,11 +72,9 @@ tasks.register<JavaExec>("jmh") {
             sourceSets.main.get().runtimeClasspath +
             jmhGeneratorClasspath
     // Defaults keep a CI smoke run short; override with -Pjmh.args.
-    argumentProviders.add(
-        CommandLineArgumentProvider {
-            (project.findProperty("jmh.args") as String? ?: "-f 1 -wi 3 -i 5 -r 1s -w 1s")
-                .split(" ")
-                .filter { it.isNotBlank() }
-        },
+    args(
+        (project.findProperty("jmh.args") as String? ?: "-f 1 -wi 3 -i 5 -r 1s -w 1s")
+            .split(" ")
+            .filter { it.isNotBlank() },
     )
 }
