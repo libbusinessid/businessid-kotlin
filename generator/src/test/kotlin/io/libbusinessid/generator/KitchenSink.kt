@@ -150,7 +150,11 @@ object KitchenSink {
         val require = n.add(
             assertion(Rules.AssertionOpKind.ASSERTION_OP_KIND_REQUIRE) {
                 reasonCode = Rules.ReasonCode.REASON_CODE_INVALID_CHARACTERS
-                messageKey = "kitchen.called.characters"
+                // Every character the emitter has to escape, in ruleset data:
+                // a quote would end the literal, a backslash would start an
+                // escape, a dollar would open a template, and a control
+                // character has no printable spelling.
+                messageKey = "kitchen.\"quote\".back\\slash.${'$'}dollar.bell\u0007"
             }.addInputNodes(digits),
         )
         val root = n.add(
@@ -446,6 +450,12 @@ object KitchenSink {
             checksum(Rules.ChecksumOpKind.CHECKSUM_OP_KIND_CHOOSE)
                 .addInputNodes(whenOne).addInputNodes(whenPresent),
         )
+        // A choose whose first branch is unconditional: it always applies, so
+        // the chain has no condition at all.
+        val unconditional = n.add(
+            checksum(Rules.ChecksumOpKind.CHECKSUM_OP_KIND_CHOOSE)
+                .addInputNodes(luhn).addInputNodes(unsupported),
+        )
         val root = n.add(
             checksum(Rules.ChecksumOpKind.CHECKSUM_OP_KIND_CHOOSE)
                 .addInputNodes(
@@ -461,7 +471,7 @@ object KitchenSink {
                                 n.add(
                                     checksum(Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ALL_CHECKS)
                                         .addInputNodes(guarded).addInputNodes(allChecks)
-                                        .addInputNodes(compareDigit),
+                                        .addInputNodes(unconditional).addInputNodes(compareDigit),
                                 ),
                             ),
                     ),
