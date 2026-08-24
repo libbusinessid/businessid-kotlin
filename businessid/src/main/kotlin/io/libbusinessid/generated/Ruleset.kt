@@ -1,4 +1,4 @@
-// Generated from businessid-rules.binpb 2026.09.1. Do not edit by hand:
+// Generated from businessid-rules.binpb 2026.09.2. Do not edit by hand:
 // run `./gradlew generateEngine`. `./gradlew checkGenerated` fails when this
 // file and the pinned bundle disagree.
 //
@@ -221,7 +221,7 @@ internal fun prependCountryIfMissing(target: Int, b: CanonBuffer) {
 
 /** The compiled ruleset: metadata and every table the pipeline reads. */
 internal object Ruleset {
-    const val RULES_VERSION: String = "2026.09.1"
+    const val RULES_VERSION: String = "2026.09.2"
     const val FORMAT_VERSION: Int = 1
     const val SOURCE_DIGEST: String = "68de82e8f0fa7557f232566b7ef14b504e0ab80637a0cfbc0e598295357aa998"
 

@@ -247,13 +247,23 @@ class KitchenSinkTest {
         val formats = emitted.getValue("Formats.kt")
         val constants = emitted.getValue("Constants.kt")
 
-        // Three shapes: (2 code points, 2 units), (1, 2) and (2, 3).
+        // Four shapes across three lists, each list of one UTF-8 element length
+        // because check 13 accepts no other kind. (2 code points, 2 units) from
+        // the two byte list; (1, 2) and (4, 4) from the four byte one; (2, 3)
+        // from the seven byte one.
+        //
+        // The four byte list is the point: one element length, two shapes. This
+        // emitter groups by code point count and UTF-16 length, which is finer
+        // than the length `ir.md` fixes, so a list the specification calls
+        // uniform still becomes more than one packed search. That is why a table
+        // of mixed lengths could never reach the search here even before the
+        // rule existed — the grouping already prevented it, for its own reasons.
         val calls = Regex("""Pred\.prefixInPacked\([^,]+, (K\d+), (\d+), (\d+)\)""")
             .findAll(formats)
             .map { Triple(it.groupValues[1], it.groupValues[2].toInt(), it.groupValues[3].toInt()) }
             .toList()
         assertEquals(
-            listOf(1 to 2, 2 to 2, 2 to 3),
+            listOf(1 to 2, 2 to 2, 2 to 3, 4 to 4),
             calls.map { it.second to it.third }.sortedWith(compareBy({ it.first }, { it.second })),
             "one call per shape, ordered by shape",
         )
