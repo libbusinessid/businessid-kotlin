@@ -12,5 +12,5 @@ package io.libbusinessid
  */
 public class BusinessIdEngineException internal constructor(
     message: String,
-    cause: Throwable? = null,
+    cause: Throwable,
 ) : RuntimeException(message, cause)

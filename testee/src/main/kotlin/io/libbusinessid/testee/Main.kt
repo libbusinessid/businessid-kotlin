@@ -155,11 +155,19 @@ internal class Framing(input: InputStream, private val output: OutputStream) {
     }
 }
 
-fun main() {
-    val framing = Framing(System.`in`, System.out)
+/**
+ * The read-answer loop, over any pair of streams so a test can drive it without
+ * starting a process.
+ */
+internal fun serve(input: InputStream, output: OutputStream) {
+    val framing = Framing(input, output)
     while (true) {
         val payload = framing.read() ?: return
         val request = Testee.TesteeRequest.parseFrom(payload)
         framing.write(Answering.answer(request).toByteArray())
     }
+}
+
+fun main() {
+    serve(System.`in`, System.out)
 }

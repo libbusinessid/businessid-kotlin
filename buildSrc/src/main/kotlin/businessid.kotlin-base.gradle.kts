@@ -90,6 +90,20 @@ tasks.register<Test>("fuzz") {
     reports.html.outputLocation.set(layout.buildDirectory.dir("reports/tests/fuzz"))
 }
 
+// Coverage. Only protoc output is filtered out of the report; that exclusion is
+// what `engine.md` section 12.2 allows for generated Protobuf code. Everything
+// else stays in, including the rules emitted from the bundle, because the split
+// between hand written and emitted is what the gate reads and publishes.
+kover {
+    reports {
+        filters {
+            excludes {
+                classes("libbusinessid.*")
+            }
+        }
+    }
+}
+
 detekt {
     buildUponDefaultConfig = true
     allRules = false

@@ -16,6 +16,7 @@ import io.libbusinessid.ValidationReport
 import io.libbusinessid.generated.Ruleset
 import io.libbusinessid.runtime.CanonBuffer
 import io.libbusinessid.runtime.ChecksumOutcome
+import io.libbusinessid.runtime.ChecksumStatus
 import io.libbusinessid.runtime.CpView
 import io.libbusinessid.runtime.Utf
 
@@ -97,30 +98,18 @@ internal object Pipeline {
                 StepStatus.UNSUPPORTED,
                 Ruleset.absentChecksumReason(d.definition),
             )
-        return if (outcome.status == StepStatus.VALID) {
+        return if (outcome.status == ChecksumStatus.VALID) {
             CHECKSUM_OK
         } else {
-            StepResult(ValidationLevel.CHECKSUM, outcome.status, outcome.reason, outcome.messageKey)
+            StepResult(ValidationLevel.CHECKSUM, outcome.status.step, outcome.reason, outcome.messageKey)
         }
     }
 
     private fun runFormat(definition: Int, ctx: EvalContext) =
-        try {
-            Ruleset.format(definition, ctx)
-        } catch (e: ArithmeticException) {
-            throw BusinessIdEngineException("format program overflowed a checked integer", e)
-        } catch (e: IndexOutOfBoundsException) {
-            throw BusinessIdEngineException("format program addressed outside a view", e)
-        }
+        guardEngineErrors("format") { Ruleset.format(definition, ctx) }
 
     private fun runChecksum(definition: Int, ctx: EvalContext): ChecksumOutcome? =
-        try {
-            Ruleset.checksum(definition, ctx)
-        } catch (e: ArithmeticException) {
-            throw BusinessIdEngineException("checksum program overflowed a checked integer", e)
-        } catch (e: IndexOutOfBoundsException) {
-            throw BusinessIdEngineException("checksum program addressed outside a view", e)
-        }
+        guardEngineErrors("checksum") { Ruleset.checksum(definition, ctx) }
 
     private fun report(d: Dispatched, format: StepResult, checksum: StepResult) =
         ValidationReport(

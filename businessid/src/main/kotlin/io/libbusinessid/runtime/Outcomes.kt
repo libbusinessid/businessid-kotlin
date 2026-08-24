@@ -20,6 +20,20 @@ internal class AssertionFailure internal constructor(
 )
 
 /**
+ * The three states a checksum program can reach.
+ *
+ * It is a type of its own rather than a subset of [StepStatus] so that every
+ * `when` over it is exhaustive without an `else` branch no input can take.
+ * `not_run` belongs to the pipeline, which decides that a step did not run; a
+ * checksum that ran never reports it.
+ */
+internal enum class ChecksumStatus(val step: StepStatus) {
+    VALID(StepStatus.VALID),
+    INVALID(StepStatus.INVALID),
+    UNSUPPORTED(StepStatus.UNSUPPORTED),
+}
+
+/**
  * The tri-state result of a checksum program.
  *
  * @property status `valid`, `invalid` or `unsupported`; never `not_run`.
@@ -29,30 +43,30 @@ internal class AssertionFailure internal constructor(
  *   declares no key for succeeding.
  */
 internal class ChecksumOutcome internal constructor(
-    @JvmField internal val status: StepStatus,
+    @JvmField internal val status: ChecksumStatus,
     @JvmField internal val reason: ReasonCode,
     @JvmField internal val messageKey: String?,
 ) {
     internal companion object {
-        val VALID = ChecksumOutcome(StepStatus.VALID, ReasonCode.OK, null)
-        private val INVALID = ChecksumOutcome(StepStatus.INVALID, ReasonCode.INVALID_CHECKSUM, null)
-        private val UNSUPPORTED = ChecksumOutcome(StepStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_CHECKSUM, null)
+        val VALID = ChecksumOutcome(ChecksumStatus.VALID, ReasonCode.OK, null)
+        private val INVALID = ChecksumOutcome(ChecksumStatus.INVALID, ReasonCode.INVALID_CHECKSUM, null)
+        private val UNSUPPORTED = ChecksumOutcome(ChecksumStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_CHECKSUM, null)
         private val NOT_PUBLISHED =
-            ChecksumOutcome(StepStatus.UNSUPPORTED, ReasonCode.CHECKSUM_NOT_PUBLISHED, null)
+            ChecksumOutcome(ChecksumStatus.UNSUPPORTED, ReasonCode.CHECKSUM_NOT_PUBLISHED, null)
 
         fun invalid(messageKey: String?): ChecksumOutcome =
-            if (messageKey == null) INVALID else ChecksumOutcome(StepStatus.INVALID, ReasonCode.INVALID_CHECKSUM, messageKey)
+            if (messageKey == null) INVALID else ChecksumOutcome(ChecksumStatus.INVALID, ReasonCode.INVALID_CHECKSUM, messageKey)
 
         fun unsupported(messageKey: String?): ChecksumOutcome =
             if (messageKey == null) {
                 UNSUPPORTED
             } else {
-                ChecksumOutcome(StepStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_CHECKSUM, messageKey)
+                ChecksumOutcome(ChecksumStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_CHECKSUM, messageKey)
             }
 
         fun declaredUnsupported(reason: ReasonCode, messageKey: String?): ChecksumOutcome =
             when {
-                messageKey != null -> ChecksumOutcome(StepStatus.UNSUPPORTED, reason, messageKey)
+                messageKey != null -> ChecksumOutcome(ChecksumStatus.UNSUPPORTED, reason, messageKey)
                 reason == ReasonCode.CHECKSUM_NOT_PUBLISHED -> NOT_PUBLISHED
                 else -> UNSUPPORTED
             }
