@@ -10,7 +10,7 @@ code, the primitives it calls, and a hand-written API — no ruleset, no Protobu
 no decoder.
 
 ```text
-rules 2026.08.32, format version 1
+rules 2026.08.33, format version 1
 94 identifier definitions · 37 kinds · 250 programs · 2386 IR nodes
 conformance: 676 of 676 cases matched, 0 differed
 ```
@@ -270,7 +270,7 @@ GOTOOLCHAIN=auto go run \
 ```
 
 ```text
-rules 2026.08.32: 676 cases, 676 matched, 0 differed
+rules 2026.08.33: 676 cases, 676 matched, 0 differed
 conformant
 ```
 
@@ -283,7 +283,7 @@ One command verifies everything, and it is the one CI runs:
 ```
 
 ```text
-verify ok — rules 2026.08.32 · conformance 676/676 · tests 558 · coverage 99.04%/93.07% · jar 143045 B
+verify ok — rules 2026.08.33 · conformance 676/676 · tests 558 · coverage 99.04%/93.07% · jar 143045 B
 ```
 
 It covers the lock digests, the regeneration of the emitted sources,
