@@ -1,0 +1,19 @@
+# Copyright The LibBusinessID Authors.
+# SPDX-License-Identifier: Apache-2.0
+#
+# SHA pinning buys immutability at the price of automatic updates. Without this,
+# a correctly pinned workflow quietly becomes a frozen one.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # The rules bundle is not a dependency: it is pinned by rules.lock and
+    # updated by the synchronisation pull request the specification describes.
+    open-pull-requests-limit: 5

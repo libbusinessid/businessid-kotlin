@@ -85,6 +85,10 @@ tasks.register<Test>("fuzz") {
         isFailOnNoMatchingTests = false
     }
     environment("JAZZER_FUZZ", "1")
+    // The scheduled run fuzzes for longer than the smoke run in CI.
+    (project.findProperty("fuzz.seconds") as String?)?.let {
+        systemProperty("jazzer.max_duration", it + "s")
+    }
     outputs.upToDateWhen { false }
     reports.junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/fuzz"))
     reports.html.outputLocation.set(layout.buildDirectory.dir("reports/tests/fuzz"))
@@ -101,6 +105,24 @@ kover {
                 classes("libbusinessid.*")
             }
         }
+    }
+}
+
+// Resolves every declared dependency, so a missing or moved artefact fails here
+// rather than at a release.
+tasks.register("resolveAllDependencies") {
+    group = "verification"
+    description = "Resolves every resolvable configuration of this project."
+    // Resolved at configuration time and carried into the task as file trees, so
+    // nothing reaches for the project while the task runs.
+    val label = project.path
+    val resolvable = configurations
+        .filter { it.isCanBeResolved }
+        .associate { it.name to files(provider { runCatching { it.files }.getOrDefault(emptySet()) }) }
+    doLast {
+        var artefacts = 0
+        for ((_, tree) in resolvable) artefacts += tree.files.size
+        logger.lifecycle("resolved ${resolvable.size} configurations of $label, $artefacts artefacts")
     }
 }
 
