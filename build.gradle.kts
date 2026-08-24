@@ -101,6 +101,11 @@ val ktlintSources = listOf(
     "!businessid/src/main/kotlin/io/libbusinessid/generated/**",
 )
 
+// Both analysers embed a Kotlin compiler that refuses a class file version newer
+// than the release it was built against, and neither offers a launcher to point
+// elsewhere. They therefore run on the JDK this project pins — CI gives them a
+// job of their own, and CONTRIBUTING says so for a local run. The compiler and
+// the tests run across the whole supported range regardless.
 tasks.register<JavaExec>("ktlintCheck") {
     group = "verification"
     description = "Runs ktlint over the hand written sources."

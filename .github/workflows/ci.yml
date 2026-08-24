@@ -20,6 +20,47 @@ env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
 
 jobs:
+  analyse:
+    name: Digests, generated sources, lint and API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          validate-wrappers: true
+
+      - name: Verify the pinned digests
+        run: ./scripts/verify-lock.sh
+
+      - name: Regenerated sources match the pinned ruleset
+        run: ./gradlew checkGenerated
+
+      # Both analysers embed a Kotlin compiler that refuses a class file version
+      # newer than the release it was built against, so they run once, on the JDK
+      # this project pins. The compiler and the tests run across the whole
+      # supported range in the job below.
+      - name: Format and lint
+        run: ./gradlew ktlintCheck detekt
+
+      - name: Public API is unchanged
+        run: ./gradlew apiCheck
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: analysis-reports
+          path: '**/build/reports/'
+          retention-days: 7
+
   build:
     name: Build on JDK ${{ matrix.jdk }}
     runs-on: ubuntu-latest
@@ -42,18 +83,6 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           validate-wrappers: true
-
-      - name: Verify the pinned digests
-        run: ./scripts/verify-lock.sh
-
-      - name: Regenerated sources match the pinned ruleset
-        run: ./gradlew checkGenerated
-
-      - name: Format and lint
-        run: ./gradlew ktlintCheck detekt
-
-      - name: Public API is unchanged
-        run: ./gradlew apiCheck
 
       - name: Tests
         run: ./gradlew test

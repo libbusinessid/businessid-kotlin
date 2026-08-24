@@ -149,6 +149,12 @@ detekt {
     parallel = true
 }
 
+// Detekt runs inside the Gradle daemon and carries its own Kotlin compiler,
+// which refuses a class file version newer than the release it was built
+// against — 1.23.8 stops at "25.0.4" on a JDK 25 daemon, and there is no
+// launcher to point elsewhere. So the analysers run once, on the JDK this
+// project pins, in a CI job of their own; the compiler and the tests still run
+// across the whole supported range.
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     jvmTarget = "11"
     reports {

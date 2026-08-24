@@ -9,16 +9,20 @@ and the whole corpus passes under it.
 
 ## Open
 
-### 1. `engine.md` section 9.1 and `ir.md` section 1.1 disagree on an out of bounds access in a checksum
+### 1. `engine.md` section 9.1 contradicts itself, and `ir.md`, on an out of bounds access in a checksum
 
-**Measured.** `engine.md` section 9.1 says, of a view addressed outside its
-bounds: *« un accès hors limites dans un checksum après format valide indique un
-bundle invalide et doit produire une erreur moteur »*. `ir.md` says the opposite
-in three places: section 1.1, *"Absence is never an error and never an
-exception"*; section 1.2, an index outside a remainder table *"makes the
-enclosing checksum node evaluate to `unsupported`"*; and the descriptions of
-`COMPARE_DIGIT`, `COMPARE_SLICE` and `SLICE`, each of which is *"indeterminate
-when … `index` is out of range"*.
+**Measured.** The tension is inside the section, between its two sentences.
+`engine.md` section 9.1 opens with *« Une vue hors limites produit une valeur
+absente, jamais une exception »* and closes with *« un accès hors limites dans un
+checksum après format valide indique un bundle invalide et doit produire une
+erreur moteur »*. The first says absent, the second says engine error, of the
+same access.
+
+`ir.md` sides with the first, in three places: section 1.1, *"Absence is never an
+error and never an exception"*; section 1.2, an index outside a remainder table
+*"makes the enclosing checksum node evaluate to `unsupported`"*; and the
+descriptions of `COMPARE_DIGIT`, `COMPARE_SLICE` and `SLICE`, each of which is
+*"indeterminate when … `index` is out of range"*.
 
 The two readings are observable and differ on real input. Under `engine.md` a
 value whose format holds but whose checksum slice runs past the end raises an
@@ -37,8 +41,10 @@ The guard is still there and still typed: `guardEngineErrors` turns an
 emitted arithmetic can overflow and every view constructor answers absence rather
 than throwing.
 
-**Proposed.** Reword `engine.md` section 9.1 to point at `ir.md`: an out of
-bounds access is an indeterminate value, and an engine error is reserved for an
+**Proposed.** Drop the second sentence of `engine.md` section 9.1, or reduce it
+to what it seems to mean: such an access *suggests* a ruleset whose format rule
+does not establish the bounds its checksum assumes, which is worth saying, and
+is not an instruction about what to answer. An engine error stays reserved for an
 invariant the load checks were supposed to have made impossible.
 
 ### 2. The UTF-8 length of ill formed text is unspecified, and the order of the two bounds makes it observable
@@ -52,8 +58,9 @@ depending on the count chosen.
 
 This engine counts an unpaired surrogate as three bytes, which is what its code
 unit would take and the only count that does not depend on a replacement policy.
-Counting it as one — what `String.getBytes` does, substituting `?` — moves the
-boundary by two bytes per surrogate.
+The alternative was measured rather than assumed: `String.getBytes(UTF_8)` on a
+lone high surrogate returns a single byte, `0x3F`, having substituted a question
+mark. That reading moves the boundary by two bytes per surrogate.
 
 **What this engine does.** Three bytes, documented at `Utf.utf8Length`. The
 difference is reachable only by input that is both ill formed and within a few
@@ -85,6 +92,21 @@ nothing evaluates would be refusing something no engine can observe.
 nodes or over every node. Both readings agree on every ruleset an author would
 write, which is exactly why it will be decided by accident otherwise.
 
+## Not a specification question, recorded because it shapes the build
+
+### Detekt and ktlint cannot run on a JDK newer than the release they were built against
+
+**Measured.** On a JDK 25 daemon, `detekt` 1.23.8 — the newest stable — stops
+with `25.0.4` before reading a line: the Kotlin compiler it embeds refuses a
+class file version it does not know. Its Gradle task runs inside the daemon and
+offers no launcher to point at another JVM, and the same exposure applies to the
+ktlint command line.
+
+**What this engine does.** The analysers run once, in a CI job of their own, on
+the JDK the project pins. The compiler and the tests still run across the whole
+supported range, so nothing about the code goes unchecked on a newer JDK — only
+the analysis of it is pinned. `CONTRIBUTING.md` says the same for a local run.
+
 ## Settled upstream
 
 ### `loader-call-cycle-014` and `loader-unknown-call-target-015` are invalid twice over — and the order saves them
@@ -108,6 +130,18 @@ Nothing found. All thirty-five `load_ruleset` fixtures of rules `2026.08.26` wer
 decoded byte for byte, and each is refused at exactly the check its name targets,
 with the error kind the corpus expects. The two above are the only ones with a
 second fault, and the order of the checks resolves them.
+
+### `dispatch-unsupported-country-006` does not test an unsupported country
+
+**Cosmetic, and the expectation is right.** The case sends `vat` with the country
+`UK`, which the dispatcher aliases to `GB`; the value then resolves and is judged
+invalid on length by the British rule. Its description says exactly that — *"A
+country alias resolves to its target"* — and only the identifier reads as
+something else. `dispatch-unsupported-country-007`, the JP one beside it, is the
+case the shared name belongs to.
+
+Worth renaming the day the corpus is touched for another reason. Nothing depends
+on it, and this engine passes it as written.
 
 ### The expansion count of the published ruleset
 
