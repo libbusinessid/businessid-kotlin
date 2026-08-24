@@ -10,7 +10,7 @@ code, the primitives it calls, and a hand-written API — no ruleset, no Protobu
 no decoder.
 
 ```text
-rules 2026.09.2, format version 1
+rules 2026.08.32, format version 1
 94 identifier definitions · 37 kinds · 250 programs · 2386 IR nodes
 conformance: 676 of 676 cases matched, 0 differed
 ```
@@ -270,11 +270,31 @@ GOTOOLCHAIN=auto go run \
 ```
 
 ```text
-rules 2026.09.2: 676 cases, 676 matched, 0 differed
+rules 2026.08.32: 676 cases, 676 matched, 0 differed
 conformant
 ```
 
 ## Building
+
+One command verifies everything, and it is the one CI runs:
+
+```bash
+./scripts/verify.sh
+```
+
+```text
+verify ok — rules 2026.08.32 · conformance 676/676 · tests 558 · coverage 99.04%/93.07% · jar 143045 B
+```
+
+It covers the lock digests, the regeneration of the emitted sources,
+compilation, tests, the shared conformance suite against the runner from `spec`,
+lint, format, coverage and its thresholds, and packaging including both consumer
+projects. It prints that one line when everything passes, the failing step's
+output and only that when something does not, and exits non-zero either way it
+should. `engine.md` section 12.5 asks for it; `CLAUDE.md` says why it is worth
+preferring to the pieces.
+
+The pieces are still there when a single one is what you want:
 
 ```bash
 ./scripts/verify-lock.sh   # the eight digests rules.lock declares

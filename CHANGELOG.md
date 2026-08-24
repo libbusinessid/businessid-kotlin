@@ -21,8 +21,32 @@ independently.
   and answers the same whatever the order of requests.
 - Maven publication with sources, Dokka documentation, a POM, checksums and
   optional signing.
+- `./scripts/verify.sh`, the single entry point `engine.md` section 12.5
+  requires: lock digests, regeneration of the emitted sources, compilation,
+  tests, the shared conformance suite against the runner from `spec`, lint,
+  format, coverage and its thresholds, and packaging including both consumer
+  projects. One line on success, the failing step's output and only that on
+  failure, non-zero the moment a step fails. It is what CI runs, so "green" has
+  one definition. `CLAUDE.md` carries the rule, as section 12.5 asks.
+- The command refuses to believe an exit code of zero. Every step that owns a
+  verdict is forced to execute, and afterwards must show evidence newer than the
+  run; a step that was skipped or replayed fails the whole command. A step that
+  *cannot* run — the Android consumer with no SDK — fails too, rather than being
+  omitted from a line that claims the work was done.
 
 ### Fixed
+
+- Building the entry point found three ways a partial command reports a verdict
+  it never computed. `--rerun` is a task option that binds to the task it
+  follows, so `a b c --rerun` forces `c` alone; it does not reach a lifecycle
+  task's dependencies, so `assemble --rerun` re-runs nothing; and the consumer
+  projects' nested Gradle builds replayed their own test results, which
+  `--rerun-tasks` now prevents. Each was caught by the freshness check refusing a
+  zero exit, not by reading the output.
+- The first version of `verify.sh` printed the failing step and exited zero:
+  inside `if ! cmd`, the `$?` it read was the status of the negation, which is
+  zero exactly when the command failed. Caught on the first run against a real
+  failure.
 
 - The scheduled benchmarks job could never have written its results. JMH resolves
   a relative `-rff` against the working directory of its own process, which for a
@@ -43,7 +67,14 @@ independently.
 
 ### Changed
 
-- Compiled against rules `2026.09.2`. The bundle is byte identical to
+- Compiled against rules `2026.08.32`. The version moves backwards on purpose:
+  `PATCH` in `YYYY.MM.PATCH` is a counter within a month with no upper bound, and
+  four releases had announced September while still in August. Nothing in this
+  repository compares rules versions for order — they are compared for equality
+  against `rules.lock` and never sorted, and the published Maven version is
+  independent and SemVer — so the correction costs a visible discontinuity and
+  nothing else.
+- Earlier, against rules `2026.09.2`. The bundle is byte identical to
   `2026.08.31` apart from the version string across all three releases, so
   nothing emitted moved but the constant that carries it. The corpus gained
   three cases and now stands at 676.
