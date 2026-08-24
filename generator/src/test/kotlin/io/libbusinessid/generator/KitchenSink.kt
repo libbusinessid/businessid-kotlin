@@ -245,14 +245,30 @@ object KitchenSink {
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) { addAllValues(listOf("P", "Z")) }
                 .addInputNodes(value),
         )
-        // A membership list long enough to be packed into string constants
-        // rather than walked, of three different shapes, holding every character
-        // the emitter has to escape and a pair whose code point order and UTF-16
-        // order disagree.
-        val membership = n.add(
+        // Membership lists long enough to be packed into string constants rather
+        // than walked. One `prefix_in` per element length under an `any`, which
+        // is the shape `ir.md` prescribes and the only one check 13 accepts: a
+        // single list of mixed lengths answers wrongly, not slowly.
+        val membershipTwoBytes = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
-                addAllValues(MEMBERSHIP)
+                addAllValues(MEMBERSHIP_2)
             }.addInputNodes(value),
+        )
+        val membershipFourBytes = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
+                addAllValues(MEMBERSHIP_4)
+            }.addInputNodes(value),
+        )
+        val membershipSevenBytes = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
+                addAllValues(MEMBERSHIP_7)
+            }.addInputNodes(value),
+        )
+        val membership = n.add(
+            predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_ANY)
+                .addInputNodes(membershipTwoBytes)
+                .addInputNodes(membershipFourBytes)
+                .addInputNodes(membershipSevenBytes),
         )
         val charAtIn = n.add(
             predicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN) {
@@ -529,31 +545,51 @@ object KitchenSink {
     private val LONG_CONSTANT: String = (0 until 600).joinToString("") { "abcdefghij"[it % 10].toString() }
 
     /**
-     * A membership list of three shapes.
+     * Twenty prefixes of two UTF-8 bytes, holding every character the emitter
+     * must escape.
      *
-     * Twenty entries of two code points and two UTF-16 units, holding the four
-     * characters a Kotlin string literal cannot carry raw; two of one code point
-     * and two units, which only a supplementary character gives; and two of two
-     * code points and three units, one BMP and one supplementary in either
-     * order — the pair whose code point order and UTF-16 order disagree.
-     *
-     * Sorted by UTF-8 bytes and deduplicated, as check 12 requires of the field.
+     * `U+0007`, `"`, `$` and `\` are the four a Kotlin string literal cannot
+     * carry raw; the rest fill the list past the threshold above which it is
+     * packed rather than walked, so the escaping is exercised in a real string
+     * constant and not only in an array literal.
      */
-    private val MEMBERSHIP: List<String> = buildList {
-        // Two units, two code points. U+0007, U+0022, U+0024 and U+005C are the
-        // four the emitter escapes; the rest fill the list past the threshold
-        // above which it is packed rather than walked.
+    private val MEMBERSHIP_2: List<String> = buildList {
         add("\u0007A")
         add("\"A")
         add("${'$'}A")
         add("\\A")
         for (c in 'a'..'p') add("" + c + "A")
-        // One code point, two units.
-        add("\uD800\uDC00")
-        add("\uD800\uDC01")
-        // Two code points, three units, in both arrangements.
-        add("\uD800\uDC02Z")
-        add("\uFFFD\uD800\uDC03")
+    }.sortedWith { a, b -> compareUtf8Bytes(a, b) }
+
+    /**
+     * Twenty prefixes of four UTF-8 bytes, in two shapes.
+     *
+     * Sixteen supplementary characters, one code point in two UTF-16 units
+     * each, and four of four ASCII characters. One element length, and still two
+     * shapes: the emitter groups by code point count and UTF-16 length, which is
+     * finer than the length `ir.md` fixes, so a single accepted list still
+     * becomes more than one packed search.
+     */
+    private val MEMBERSHIP_4: List<String> = buildList {
+        for (i in 0 until 16) add(String(Character.toChars(0x10100 + i)))
+        for (c in 'a'..'d') add("" + c + "AAA")
+    }.sortedWith { a, b -> compareUtf8Bytes(a, b) }
+
+    /**
+     * Sixteen prefixes of seven UTF-8 bytes, one shape, in both arrangements of
+     * a supplementary character and a three byte one.
+     *
+     * Two code points and three UTF-16 units either way, so all sixteen land in
+     * one packed table — and the two arrangements are exactly the pair whose
+     * code point order and UTF-16 order disagree. An entry opening at `U+FFFD`
+     * precedes a supplementary one by code point and follows it by code unit, so
+     * a table packed in Kotlin's own ordering would step past a member and call
+     * it absent. This is what makes that failure reachable end to end rather
+     * than only in a unit test of the comparator.
+     */
+    private val MEMBERSHIP_7: List<String> = buildList {
+        for (i in 0 until 8) add("\uFFFD" + String(Character.toChars(0x10200 + i)))
+        for (i in 0 until 8) add(String(Character.toChars(0x10300 + i)) + "\uFFFC")
     }.sortedWith { a, b -> compareUtf8Bytes(a, b) }
 
     private fun compareUtf8Bytes(left: String, right: String): Int {

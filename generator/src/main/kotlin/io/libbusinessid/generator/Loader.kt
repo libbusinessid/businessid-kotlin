@@ -645,6 +645,29 @@ internal class Loader private constructor(private val bytes: ByteArray, private 
                 if (sorted != op.valuesList || op.valuesList.distinct().size != op.valuesCount) {
                     invalidRuleset(13, "$where declares prefixes that are not sorted and deduplicated")
                 }
+                // One element length per prefix_in, counted in UTF-8 bytes as
+                // `ir.md` counts it. "Starts with one of these" over a sorted
+                // list of mixed lengths answers wrongly rather than slowly: with
+                // `["AB", "ABA"]` against `"ABCD"`, a search for the greatest
+                // element not after the input finds `ABA`, which is not a
+                // prefix, while `AB` is. At one length, starting with an element
+                // is equalling its opening of that length, and the search is
+                // exact. Mixed lengths are one prefix_in per length under an
+                // `any`.
+                //
+                // No published rule carries the shape — all four membership
+                // nodes hold one length each — so no conformance case can catch
+                // an engine that accepts it. The bundle may not carry it.
+                val lengths = op.valuesList.map { it.toByteArray(Charsets.UTF_8).size }
+                for (i in 1 until lengths.size) {
+                    if (lengths[i] != lengths[i - 1]) {
+                        invalidRuleset(
+                            13,
+                            "$where mixes prefix lengths ${lengths[i - 1]} and ${lengths[i]}; " +
+                                "write one prefix_in per length under an any",
+                        )
+                    }
+                }
             }
 
             Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN -> {

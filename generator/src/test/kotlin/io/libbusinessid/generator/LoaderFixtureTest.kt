@@ -70,6 +70,9 @@ class LoaderFixtureTest {
         // as section 9 states it". Check 12 is parameter presence, and this
         // engine reported the order there until the list named it.
         "loader-prefix-in-unsorted-039" to 13,
+        // Sorted and deduplicated, so the order rule passes it; only the one
+        // element length rule refuses it. Both live at check 13.
+        "loader-prefix-in-mixed-lengths-040" to 13,
     )
 
     @TestFactory

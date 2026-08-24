@@ -209,6 +209,14 @@ class LoaderRefusalTest {
                 addAllValues(listOf("Z", "P"))
             }
         },
+        // Sorted and deduplicated, so the order rule lets it through; only the
+        // one element length rule refuses it. The pair is `ir.md`'s own example.
+        Mutation("prefixes of mixed element lengths", 13) {
+            onPredicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
+                clearValues()
+                addAllValues(listOf("AB", "ABA"))
+            }
+        },
         Mutation("the same prefix twice", 13) {
             onPredicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
                 clearValues()
@@ -941,6 +949,35 @@ class LoaderRefusalTest {
             failure.message.endsWith("is a when branch no choose reads"),
             failure.message,
         )
+    }
+
+    /**
+     * The one element length rule counts UTF-8 bytes, as `ir.md` counts it.
+     *
+     * `PZ` and `\u00E9` are both two bytes and one is not two code points, so a
+     * loader reading the rule as "one code point count" would refuse a bundle
+     * the reference accepts. No conformance case covers the difference — the
+     * published ruleset is entirely ASCII, where the two readings agree — so it
+     * is pinned here.
+     */
+    @Test
+    fun `one element length is counted in bytes, not in code points`() {
+        val builder = KitchenSink.bundle().toBuilder().apply {
+            Mutation("accepted", 0) {
+                onPredicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
+                    clearValues()
+                    addAllValues(listOf("PZ", "\u00E9"))
+                }
+            }.apply(this)
+        }
+        val values = listOf("PZ", "\u00E9")
+        assertEquals(
+            listOf(2, 2),
+            values.map { it.toByteArray(Charsets.UTF_8).size },
+            "both are two UTF-8 bytes",
+        )
+        assertEquals(listOf(2, 1), values.map { it.length }, "and they are not the same number of code points")
+        Loader.load(builder.build().toByteArray())
     }
 
     @TestFactory

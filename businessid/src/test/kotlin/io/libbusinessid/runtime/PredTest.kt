@@ -230,4 +230,52 @@ class PredTest {
         assertFalse(Pred.integerIs(7L, 8L))
         assertFalse(Pred.integerIs(null, 7L))
     }
+
+    /**
+     * What the packed search does with element lengths mixed into one table.
+     *
+     * `ir.md` refuses the shape at check 13, and this is why: over one sorted
+     * table a search for the greatest element not after the input finds `ABA`
+     * for the input `ABCD`, which is not a prefix, while `AB` is. The search
+     * answers wrongly, not slowly, so no timing test would have found it.
+     *
+     * This engine never builds such a table. Its emitter groups by code point
+     * count and UTF-16 length before packing, so `["AB", "ABA"]` becomes two
+     * searches combined with `||` — which is the shape the specification
+     * prescribes, arrived at for the emitter's own reasons. The second half of
+     * this test is the emitted form, and it answers correctly.
+     */
+    @Test
+    fun `mixed lengths in one packed table answer wrongly, and the emitted split does not`() {
+        val input = view("ABCD")
+
+        // One table holding both elements, sorted: "AB" then "ABA", packed to
+        // "ABABA". A packed table is read at one stride, and neither stride
+        // describes it.
+        //
+        // At the longer element's stride the five characters are one entry of
+        // three and a partial second, so the two code point member is invisible
+        // and "ABCD" is refused although it starts with "AB".
+        assertFalse(
+            Pred.prefixInPacked(input, "ABABA", 3, 3),
+            "a three code point search cannot see the two code point member",
+        )
+        // At the shorter stride the same five characters are two entries of two
+        // and the final "A" is dropped: the table read is ["AB", "AB"], not the
+        // one that was packed. It happens to answer true here, which is the
+        // dangerous part — a wrong table can agree with a right one on the
+        // input you tried.
+        assertTrue(Pred.prefixInPacked(input, "ABABA", 2, 2), "and it is right by luck, over a table it misread")
+
+        // The emitted form: one packed table per shape, combined with `||`.
+        val split = Pred.prefixInPacked(input, "AB", 2, 2) || Pred.prefixInPacked(input, "ABA", 3, 3)
+        assertTrue(split, "ABCD starts with AB")
+
+        // And it is still exact where it should refuse.
+        val other = view("AXCD")
+        assertFalse(
+            Pred.prefixInPacked(other, "AB", 2, 2) || Pred.prefixInPacked(other, "ABA", 3, 3),
+            "AXCD starts with neither",
+        )
+    }
 }

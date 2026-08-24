@@ -43,10 +43,27 @@ independently.
 
 ### Changed
 
-- Compiled against rules `2026.09.1`. The bundle is byte identical to
-  `2026.08.31` apart from the version string across both releases, so nothing
-  emitted moved but the constant that carries it and the jar fell by six bytes.
-  The corpus gained two cases and now stands at 675.
+- Compiled against rules `2026.09.2`. The bundle is byte identical to
+  `2026.08.31` apart from the version string across all three releases, so
+  nothing emitted moved but the constant that carries it. The corpus gained
+  three cases and now stands at 676.
+- A `prefix_in` may carry only one element length, counted in UTF-8 bytes, and a
+  bundle mixing lengths is refused at check 13. "Starts with one of these" over
+  one sorted list of mixed lengths answers **wrongly**, not slowly: with
+  `["AB", "ABA"]` against `"ABCD"`, a search for the greatest element not after
+  the input finds `ABA`, which is not a prefix, while `AB` is. All four
+  membership nodes of the published ruleset hold one length each — 1 748 of
+  five bytes, 818 of six, 148 of four, 41 of two — so no conformance case could
+  ever catch an engine that accepted the shape, which is why the bundle may not
+  carry it.
+- This engine's packed search was already right on the shape and stays right:
+  the emitter groups by code point count and UTF-16 length before packing, which
+  is **finer** than the length the specification fixes, so a mixed list becomes
+  one search per shape combined with `||` — the form `ir.md` prescribes, reached
+  independently. The synthetic ruleset now carries a list of one byte length and
+  two code point counts to hold that distinction still: reading the rule in code
+  points instead of bytes refuses that list, and would refuse bundles the
+  reference accepts.
 - `loader-when-unreferenced-038` pins the check 16 rule refusing a `WHEN` branch
   no `CHOOSE` reads. It differs from `loader-stray-when-branch-022` at one byte,
   the `root_node` varint, and both expect `invalid_ruleset`, so only a message
