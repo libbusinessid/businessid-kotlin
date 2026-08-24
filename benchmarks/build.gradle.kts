@@ -60,6 +60,16 @@ val jmhCompile = tasks.register<JavaCompile>("jmhCompileGenerated") {
     options.compilerArgs.clear()
 }
 
+// Where the results land, decided here rather than by whoever writes the command
+// line. JMH resolves a relative `-rff` against the working directory of its own
+// process, which for a JavaExec task is the project directory and not the root of
+// the repository. A caller passing the repository relative path the upload step
+// expects therefore aims at benchmarks/benchmarks/build/jmh.json: JMH refuses
+// with "Can not touch the result file" before running a single benchmark, and on
+// the day that directory happens to exist it writes there instead and the upload
+// silently collects nothing. An absolute path cannot be doubled.
+val jmhResultFile = layout.buildDirectory.file("jmh.json")
+
 tasks.register<JavaExec>("jmh") {
     group = "verification"
     description = "Runs the JMH benchmarks."
@@ -72,9 +82,14 @@ tasks.register<JavaExec>("jmh") {
         sourceSets.main.get().runtimeClasspath +
         jmhGeneratorClasspath
     // Defaults keep a CI smoke run short; override with -Pjmh.args.
-    args(
-        (project.findProperty("jmh.args") as String? ?: "-f 1 -wi 3 -i 5 -r 1s -w 1s")
-            .split(" ")
-            .filter { it.isNotBlank() },
-    )
+    val requested = (project.findProperty("jmh.args") as String? ?: "-f 1 -wi 3 -i 5 -r 1s -w 1s")
+        .split(" ")
+        .filter { it.isNotBlank() }
+    val result = jmhResultFile.get().asFile
+    // A caller who names their own result file keeps it; otherwise the results
+    // are written where the upload step and this build agree they are.
+    val chosen = if ("-rff" in requested) requested else requested + listOf("-rf", "json", "-rff", result.absolutePath)
+    args(chosen)
+    outputs.file(jmhResultFile)
+    doFirst { result.parentFile.mkdirs() }
 }

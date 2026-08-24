@@ -49,6 +49,26 @@ class PublishedRulesetTest {
         assertEquals(SpecFiles.lock["rules_version"], SpecFiles.conformance.rulesVersion)
     }
 
+    /**
+     * The provenance note and the lock cannot disagree about what was copied.
+     *
+     * Nothing checked this, and it drifted: the note still named the previous
+     * rules version and the commit it came from while `rules.lock` had moved on.
+     * A reader trusts that file to say where these bytes are from, and the
+     * digests above cannot catch a stale sentence.
+     */
+    @Test
+    fun `the provenance note names the version and commit rules dot lock pins`() {
+        val provenance = SpecFiles.file("PROVENANCE.md").readText()
+        for (key in listOf("rules_version", "source_commit")) {
+            val declared = requireNotNull(SpecFiles.lock[key]) { "rules.lock declares no $key" }
+            assertTrue(
+                "`$declared`" in provenance,
+                "spec/PROVENANCE.md does not name the $key that rules.lock pins, $declared",
+            )
+        }
+    }
+
     @Test
     fun `the shape of the published ruleset`() {
         assertEquals(94, loaded.proto.identifiersCount, "identifier definitions")

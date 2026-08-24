@@ -10,9 +10,9 @@ code, the primitives it calls, and a hand-written API — no ruleset, no Protobu
 no decoder.
 
 ```text
-rules 2026.08.31, format version 1
+rules 2026.09.1, format version 1
 94 identifier definitions · 37 kinds · 250 programs · 2386 IR nodes
-conformance: 673 of 673 cases matched, 0 differed
+conformance: 675 of 675 cases matched, 0 differed
 ```
 
 ## What it validates, and what it does not
@@ -270,7 +270,7 @@ GOTOOLCHAIN=auto go run \
 ```
 
 ```text
-rules 2026.08.31: 673 cases, 673 matched, 0 differed
+rules 2026.09.1: 675 cases, 675 matched, 0 differed
 conformant
 ```
 

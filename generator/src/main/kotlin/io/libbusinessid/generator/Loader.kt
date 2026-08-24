@@ -643,7 +643,7 @@ internal class Loader private constructor(private val bytes: ByteArray, private 
                 for (v in op.valuesList) constantText(where, v, nonEmpty = true)
                 val sorted = op.valuesList.sortedWith(Comparator { a, b -> compareUtf8(a, b) })
                 if (sorted != op.valuesList || op.valuesList.distinct().size != op.valuesCount) {
-                    invalidRuleset(12, "$where declares prefixes that are not sorted and deduplicated")
+                    invalidRuleset(13, "$where declares prefixes that are not sorted and deduplicated")
                 }
             }
 
@@ -663,10 +663,19 @@ internal class Loader private constructor(private val bytes: ByteArray, private 
         }
     }
 
+    /**
+     * A parameter list under the normative order of `ir.md` section 9.
+     *
+     * Check 13 and not check 12: the list of section 10 gives check 12 the
+     * parameters an operation declares and check 13 "the declared order of a
+     * parameter list as section 9 states it". This engine reported the order at
+     * check 12 until the list named it, which refused the same bundles under the
+     * wrong number.
+     */
     private fun requireAscending(where: String, values: List<Long>, name: String) {
         for (i in 1 until values.size) {
             if (values[i] <= values[i - 1]) {
-                invalidRuleset(12, "$where declares $name that is not ascending and deduplicated")
+                invalidRuleset(13, "$where declares $name that is not ascending and deduplicated")
             }
         }
     }

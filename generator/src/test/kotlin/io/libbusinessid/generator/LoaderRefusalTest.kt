@@ -193,19 +193,23 @@ class LoaderRefusalTest {
         Mutation("digits_to_integer carrying a modulus it does not declare", 12) {
             onInteger(Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER) { modulus = 7 }
         },
-        Mutation("lengths that are not ascending", 12) {
+        // Check 13 and not 12: section 10 gives check 12 the parameters an
+        // operation declares and check 13 "the declared order of a parameter
+        // list as section 9 states it". The list named the order at 2026.09.1;
+        // this engine had been refusing the same bundles under the wrong number.
+        Mutation("lengths that are not ascending", 13) {
             onPredicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_IN) {
                 clearLengths()
                 addAllLengths(listOf(8, 6))
             }
         },
-        Mutation("prefixes that are not sorted", 12) {
+        Mutation("prefixes that are not sorted", 13) {
             onPredicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
                 clearValues()
                 addAllValues(listOf("Z", "P"))
             }
         },
-        Mutation("the same prefix twice", 12) {
+        Mutation("the same prefix twice", 13) {
             onPredicate(Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN) {
                 clearValues()
                 addAllValues(listOf("P", "P"))

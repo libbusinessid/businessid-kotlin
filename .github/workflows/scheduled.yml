@@ -9,6 +9,17 @@ name: Scheduled
 on:
   schedule:
     - cron: '17 3 * * 1'
+  # These jobs never ran on a pull request, so nothing here was ever exercised
+  # before merging. The benchmarks job carried a result path that could not work
+  # from the day the workflow was written, and the first scheduled run — the only
+  # one there has been — is what found it. A job that has never passed is the same
+  # shape as one that could never have passed. Running the whole suite on every
+  # pull request would cost more than it is worth, so it runs on the pull requests
+  # that touch what it checks.
+  pull_request:
+    paths:
+      - '.github/workflows/scheduled.yml'
+      - 'benchmarks/**'
   workflow_dispatch:
     inputs:
       fuzzSeconds:
@@ -41,7 +52,13 @@ jobs:
 
       - name: Fuzz the engine and the generator
         env:
-          BUSINESSID_FUZZ_SECONDS: ${{ github.event.inputs.fuzzSeconds || '600' }}
+          # Ten minutes a target on the weekly run, one on a pull request.
+          # The pull request trigger exists so a change to this workflow or to
+          # the benchmarks is seen before it is merged, not to re-fuzz the
+          # engine; ci.yml already runs a fuzz smoke test on every pull request.
+          # A guard that costs forty minutes gets deleted the first time someone
+          # is in a hurry.
+          BUSINESSID_FUZZ_SECONDS: ${{ github.event.inputs.fuzzSeconds || (github.event_name == 'pull_request' && '60' || '600') }}
         run: ./gradlew :businessid:fuzz :generator:fuzz -Pfuzz.seconds="$BUSINESSID_FUZZ_SECONDS"
 
       - name: Upload any finding
@@ -71,7 +88,10 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Run the JMH benchmarks
-        run: ./gradlew :benchmarks:jmh -Pjmh.args="-f 2 -wi 5 -i 5 -r 2s -w 2s -rf json -rff benchmarks/build/jmh.json"
+        # The result file is chosen by benchmarks/build.gradle.kts, which knows
+        # its own build directory. A path passed here would be resolved against
+        # the project directory rather than the repository root.
+        run: ./gradlew :benchmarks:jmh -Pjmh.args="-f 2 -wi 5 -i 5 -r 2s -w 2s"
 
       - name: Upload the results
         if: always()
@@ -127,5 +147,13 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
+      # Compile, test, cover and package across the range, which is what this
+      # job exists to prove. Not `build`: that pulls in `check`, and `check`
+      # runs detekt and ktlint, neither of which can run in a daemon JVM newer
+      # than the release they were built against — detekt 1.23.8 stops with the
+      # bare version number before reading a line. SPEC-ISSUES.md records it,
+      # and ci.yml runs the analysers once in a job of their own on the JDK this
+      # project pins. This job ran `build` and so failed on JDK 25 for a reason
+      # that had nothing to do with the toolchain range it is testing.
       - name: Build and test
-        run: ./gradlew build
+        run: ./gradlew test coverage assemble

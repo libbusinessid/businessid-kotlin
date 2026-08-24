@@ -5,8 +5,10 @@ package io.libbusinessid.generator
 
 import libbusinessid.ir.v1.Rules
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.test.assertFailsWith
 
 /**
  * The eleven operations the published ruleset does not use, and the emitter
@@ -352,5 +354,45 @@ class KitchenSinkTest {
         // emitted and `Ck.noBranch()` is not reachable from it.
         assertTrue("Ck.luhn(" in checksums)
         assertTrue(checksums.contains("Ck.noBranch()"), "the guarded choose still needs its fallback")
+    }
+
+    /**
+     * The emitter checks the order it needs; it does not re-establish it.
+     *
+     * `ir.md` says the values of `prefix_in` are sorted and deduplicated by the
+     * compiler, and the guarantee exists so an engine can search them without
+     * reordering anything. The text does not name the order, but check 12 does:
+     * it refuses any list that is not sorted by `compareUtf8`, and UTF-8 byte
+     * order is code point order — which is what the packed search compares. So
+     * a list reaching the emitter is already in the right order, and sorting it
+     * again would only hide the day that stopped being true.
+     */
+    @Test
+    fun `a membership group already in order is passed through untouched`() {
+        val entries = listOf("AC", "CE", "CS", "SR", "SZ", "ZC")
+        assertEquals(entries, orderedForSearch("test", entries))
+    }
+
+    @Test
+    fun `a membership group out of order is refused rather than sorted`() {
+        val entries = listOf("AC", "CS", "CE")
+        val failure = assertFailsWith<IllegalStateException> { orderedForSearch("test", entries) }
+        assertTrue(failure.message!!.contains("CS"), failure.message)
+        assertTrue(failure.message!!.contains("CE"), failure.message)
+    }
+
+    /**
+     * The order the check enforces is the one the search performs, above the
+     * Basic Multilingual Plane where the two candidate orders disagree. An entry
+     * beginning U+FFFD precedes a supplementary one by code point and follows it
+     * by UTF-16 unit; Kotlin's own `sorted()` gives the second, which is the bug
+     * this replaced.
+     */
+    @Test
+    fun `the order checked is code point order, not UTF-16 order`() {
+        val codePointOrder = listOf("\uFFFDA", "\uD800\uDC03B")
+        assertEquals(codePointOrder, orderedForSearch("test", codePointOrder))
+        assertNotEquals(codePointOrder, codePointOrder.sorted(), "the two orders must disagree here")
+        assertFailsWith<IllegalStateException> { orderedForSearch("test", codePointOrder.sorted()) }
     }
 }

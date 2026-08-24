@@ -48,6 +48,33 @@ marked always out of date, so a local run means what it says — verified by
 re-pinning to 9.3.0 against a warm directory and watching it fail, which it
 would previously have skipped.
 
+### A workflow that no pull request could run, and a job that had never passed
+
+**Measured.** The scheduled workflow runs on `schedule` and `workflow_dispatch`
+only, so nothing in it was ever exercised before merging. Its first and only
+scheduled run failed twice over. The benchmarks job passed JMH a repository
+relative `-rff benchmarks/build/jmh.json`, but JMH resolves a relative result
+path against the working directory of its own process, which for a `JavaExec`
+task is the project directory: it aimed at `benchmarks/benchmarks/build/jmh.json`
+and refused with "Can not touch the result file" before running a single
+benchmark. Reproduced locally, and confirmed by creating the doubled directory
+and watching the run succeed with the results landing there — where the upload
+step, which looks at the other path, would have collected nothing. That path was
+wrong from the day the workflow was written; the job had never passed.
+
+The same run failed the toolchain matrix on JDK 25 because it ran `./gradlew
+build`, which pulls in `check` and so detekt. `ci.yml` runs `test coverage
+assemble` across its matrix precisely to avoid that, and the two workflows had
+drifted apart. Reproduced on JDK 26 — and the first attempt reported success
+because the detekt task was up to date, which is the third time in this
+repository a warm task directory has replayed a stale pass.
+
+**What this engine does.** The result file is chosen by the build, which knows
+its own build directory; an absolute path cannot be doubled. The toolchain job
+runs the same tasks as its `ci.yml` counterpart. The scheduled workflow now also
+runs on pull requests that touch it or the benchmarks, so the next breakage of
+either is visible before it is merged rather than on a Monday.
+
 ## Settled upstream
 
 ### 1. `engine.md` section 9.1 contradicted itself on an out of bounds access — clause removed
