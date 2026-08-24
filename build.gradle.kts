@@ -11,7 +11,7 @@ plugins {
 val generatedSourceDir: Directory =
     layout.projectDirectory.dir("businessid/src/main/kotlin/io/libbusinessid/generated")
 
-val generatorClasspath: Configuration by configurations.creating
+val generatorClasspath: Configuration = configurations.create("generatorClasspath")
 
 dependencies {
     generatorClasspath(project(":generator"))
@@ -78,7 +78,7 @@ tasks.named("check") {
 // two disagreeing would be a finding worth having.
 // ---------------------------------------------------------------------------
 
-val ktlint: Configuration by configurations.creating {
+val ktlint: Configuration = configurations.create("ktlint") {
     // ktlint-cli publishes a plain and a shadowed variant; the shadowed one
     // carries its own dependencies, which is what a standalone run needs.
     attributes {
@@ -251,4 +251,62 @@ val coverage = tasks.register<CoverageGate>("coverage") {
 
 tasks.named("check") {
     dependsOn(coverage)
+}
+
+// ---------------------------------------------------------------------------
+// Consumer projects.
+//
+// Each is a build of its own that knows nothing about this repository beyond
+// the coordinates of the artefact. Including them as modules would test the
+// project rather than what a caller actually receives.
+// ---------------------------------------------------------------------------
+
+val stagingRepository = layout.buildDirectory.dir("staging-repository")
+
+val publishForConsumers = tasks.register("publishForConsumers") {
+    group = "verification"
+    description = "Publishes the library into a local repository the consumer builds read."
+    dependsOn(":businessid:publishMavenPublicationToLocalStagingRepository")
+}
+
+fun consumerTask(name: String, directory: String, arguments: List<String>) =
+    tasks.register<Exec>(name) {
+        group = "verification"
+        description = "Builds the $directory consumer project against the published artefact."
+        dependsOn(publishForConsumers)
+        workingDir = layout.projectDirectory.dir("consumer/$directory").asFile
+        val wrapper = layout.projectDirectory.file("gradlew").asFile.absolutePath
+        val repository = project(":businessid").layout.buildDirectory
+            .dir("staging-repository").get().asFile.toURI().toString()
+        commandLine(
+            listOf(
+                wrapper,
+                "--project-dir", workingDir.absolutePath,
+                "-Pbusinessid.version=${project.version}",
+                "-Pbusinessid.repository=$repository",
+                "--no-daemon",
+                "--console=plain",
+            ) + arguments,
+        )
+    }
+
+val consumerJvm = consumerTask("consumerJvmTest", "jvm", listOf("build", "run"))
+
+// The Android consumer needs an Android SDK. Where there is none it is skipped
+// rather than faked: a check that passes without running proves nothing, and CI
+// installs the SDK so it always runs there.
+val androidSdk: String? = System.getenv("ANDROID_HOME")
+    ?: System.getenv("ANDROID_SDK_ROOT")
+    ?: File(System.getProperty("user.home"), "Library/Android/sdk").takeIf { it.isDirectory }?.absolutePath
+
+val consumerAndroid = consumerTask("consumerAndroidTest", "android", listOf("build", "lint"))
+consumerAndroid.configure {
+    // Reported as SKIPPED where there is no SDK, rather than passing without
+    // running: a check that cannot run must say so. CI installs the SDK.
+    enabled = androidSdk != null
+    androidSdk?.let { environment("ANDROID_HOME", it) }
+}
+
+tasks.named("check") {
+    dependsOn(consumerJvm, consumerAndroid)
 }
