@@ -6,12 +6,7 @@ package io.libbusinessid.generator
 import libbusinessid.ir.v1.Rules
 
 /** How a program reads the values it does not receive as an operand. */
-internal class Scope(
-    val value: String,
-    val subject: String,
-    val target: String,
-    val profile: String,
-)
+internal class Scope(val value: String, val subject: String, val target: String, val profile: String)
 
 internal val FORMAT_SCOPE = Scope(
     value = "ctx.value",
@@ -39,6 +34,12 @@ internal val CANON_SCOPE = Scope(
  */
 @Suppress("TooManyFunctions")
 internal class Emitter(private val bundle: LoadedBundle) {
+    private companion object {
+        /** Below this, a code point has no printable spelling in a Kotlin literal. */
+        const val FIRST_PRINTABLE = 0x20
+        const val DELETE = 0x7F
+    }
+
     private val constants = LinkedHashMap<String, String>()
     private val constantNames = LinkedHashMap<String, String>()
 
@@ -63,13 +64,15 @@ internal class Emitter(private val bundle: LoadedBundle) {
         val formats = emitFormats()
         val checksums = emitChecksums()
         val ruleset = emitRuleset()
+        // Exactly one trailing newline per file: the emitted sources are read by
+        // the same tools as the hand written ones.
         return linkedMapOf(
             "Canonicalizers.kt" to canonicalizers,
             "Checksums.kt" to checksums,
             "Constants.kt" to emitConstants(),
             "Formats.kt" to formats,
             "Ruleset.kt" to ruleset,
-        )
+        ).mapValues { (_, content) -> content.trimEnd() + "\n" }
     }
 
     // -- constant pool -------------------------------------------------------
@@ -103,21 +106,33 @@ internal class Emitter(private val bundle: LoadedBundle) {
         }
     }
 
-    private fun intList(values: List<Int>): String =
-        pool("ints:" + values.joinToString(",")) { name ->
-            "internal val $name: IntArray = intArrayOf(${values.joinToString(", ")})"
-        }
+    private fun intList(values: List<Int>): String = pool("ints:" + values.joinToString(",")) { name ->
+        "internal val $name: IntArray = intArrayOf(${values.joinToString(", ")})"
+    }
 
-    private fun longList(values: List<Long>): String =
-        pool("longs:" + values.joinToString(",")) { name ->
-            "internal val $name: LongArray = longArrayOf(${values.joinToString(", ") { "${it}L" }})"
-        }
+    private fun longList(values: List<Long>): String = pool("longs:" + values.joinToString(",")) { name ->
+        "internal val $name: LongArray = longArrayOf(${values.joinToString(", ") { "${it}L" }})"
+    }
 
-    private fun prefixList(values: List<String>): String =
-        pool("prefixes:" + values.joinToString(" ")) { name ->
-            val rows = values.joinToString(", ") { "intArrayOf(${Cp.of(it).joinToString(", ")})" }
-            "internal val $name: Array<IntArray> = arrayOf($rows)"
+    private fun prefixList(values: List<String>): String = pool("prefixes:" + values.joinToString(" ")) { name ->
+        val rows = values.joinToString(", ") { "intArrayOf(${Cp.of(it).joinToString(", ")})" }
+        "internal val $name: Array<IntArray> = arrayOf($rows)"
+    }
+
+    /**
+     * Emits only the imports the body actually names. An import nothing uses is
+     * noise in a file no one edits, and lint would have to be told to ignore it.
+     */
+    private fun withImports(body: String): String = buildString {
+        append(header)
+        for (import in runtimeImports) {
+            val symbol = import.substringAfterLast('.')
+            val used = Regex("\\b" + Regex.escape(symbol) + "\\b").containsMatchIn(body)
+            if (used) appendLine("import $import")
         }
+        appendLine()
+        append(body)
+    }
 
     private fun emitConstants(): String = buildString {
         append(header)
@@ -137,7 +152,7 @@ internal class Emitter(private val bundle: LoadedBundle) {
                 c == '"' -> append("\\\"")
                 c == '\\' -> append("\\\\")
                 c == '$' -> append("\\$")
-                c.code < 0x20 || c.code == 0x7F -> append("\\u%04x".format(c.code))
+                c.code < FIRST_PRINTABLE || c.code == DELETE -> append("\\u%04x".format(c.code))
                 else -> append(c)
             }
         }
@@ -155,18 +170,28 @@ internal class Emitter(private val bundle: LoadedBundle) {
         fun operand(i: Int) = stringExpr(p, node.getInputNodes(i), scope)
         return when (op.kind) {
             Rules.StringOpKind.STRING_OP_KIND_CONSTANT -> view(op.text)
+
             Rules.StringOpKind.STRING_OP_KIND_VALUE -> scope.value
+
             Rules.StringOpKind.STRING_OP_KIND_SUBJECT -> scope.subject
+
             Rules.StringOpKind.STRING_OP_KIND_COUNTRY_CODE -> "targetCountryView(${scope.target})"
+
             Rules.StringOpKind.STRING_OP_KIND_SLICE -> "Txt.slice(${operand(0)}, ${op.start}, ${op.end})"
+
             Rules.StringOpKind.STRING_OP_KIND_SLICE_FROM -> "Txt.sliceFrom(${operand(0)}, ${op.start})"
+
             Rules.StringOpKind.STRING_OP_KIND_SLICE_TO -> "Txt.sliceTo(${operand(0)}, ${op.end})"
+
             Rules.StringOpKind.STRING_OP_KIND_BEFORE_FIRST ->
                 "Txt.beforeFirst(${operand(0)}, ${codePoints(op.text)})"
+
             Rules.StringOpKind.STRING_OP_KIND_AFTER_FIRST ->
                 "Txt.afterFirst(${operand(0)}, ${codePoints(op.text)})"
+
             Rules.StringOpKind.STRING_OP_KIND_STRIP_PREFIX ->
                 "Txt.stripPrefix(${operand(0)}, ${codePoints(op.text)})"
+
             else -> {
                 val parts = node.inputNodesList.indices.joinToString(", ") { operand(it) }
                 "Txt.concat(arrayOf<CpView?>($parts))"
@@ -182,37 +207,56 @@ internal class Emitter(private val bundle: LoadedBundle) {
         fun bool(i: Int) = boolExpr(p, node.getInputNodes(i), scope)
         return when (op.kind) {
             Rules.PredicateOpKind.PREDICATE_OP_KIND_IS_EMPTY -> "Pred.isEmpty(${str(0)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_IS_ABSENT -> "Pred.isAbsent(${str(0)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_EQUALS -> "Pred.equal(${str(0)}, ${str(1)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_EQ -> "Pred.lengthEq(${str(0)}, ${op.length})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_IN ->
                 "Pred.lengthIn(${str(0)}, ${intList(op.lengthsList)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_LENGTH_BETWEEN ->
                 "Pred.lengthBetween(${str(0)}, ${op.minLength}, ${op.maxLength})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_DIGITS -> "Pred.asciiDigits(${str(0)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_UPPER_LETTERS -> "Pred.asciiUpperLetters(${str(0)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_ALPHANUMERIC -> "Pred.asciiAlphanumeric(${str(0)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ASCII_CHARSET ->
                 "Pred.asciiCharset(${str(0)}, ${sortedSet(op.text)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_STARTS_WITH ->
                 "Pred.startsWith(${str(0)}, ${codePoints(op.text)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ENDS_WITH ->
                 "Pred.endsWith(${str(0)}, ${codePoints(op.text)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN ->
                 "Pred.prefixIn(${str(0)}, ${prefixList(op.valuesList)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN ->
                 "Pred.charAtIn(${str(0)}, ${op.index}, ${sortedSet(op.text)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_CONTAINS ->
                 "Pred.contains(${str(0)}, ${codePoints(op.text)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ALL ->
                 node.inputNodesList.indices.joinToString(" && ", "(", ")") { bool(it) }
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ANY ->
                 node.inputNodesList.indices.joinToString(" || ", "(", ")") { bool(it) }
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_NOT -> "!(${bool(0)})"
+
             Rules.PredicateOpKind.PREDICATE_OP_KIND_PROFILE_IS -> {
                 val profile = if (op.text == "strict_current") "STRICT_CURRENT" else "COMPATIBLE"
                 "(${scope.profile} == ValidationProfile.$profile)"
             }
+
             else -> "Pred.integerIs(${intExpr(p, node.getInputNodes(0), scope)}, ${op.constant}L)"
         }
     }
@@ -224,13 +268,18 @@ internal class Emitter(private val bundle: LoadedBundle) {
         return when (op.kind) {
             Rules.IntegerOpKind.INTEGER_OP_KIND_DIGITS_TO_INTEGER ->
                 "Arith.digitsToInteger(${stringExpr(p, operand, scope)})"
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_MOD_DIGITS ->
                 "Arith.modDigits(${stringExpr(p, operand, scope)}, ${op.modulus}L)"
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_WEIGHTED_SUM -> weightedSum(p, operand, op, scope)
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_MODULO ->
                 "Arith.modulo(${intExpr(p, operand, scope)}, ${op.modulus}L)"
+
             Rules.IntegerOpKind.INTEGER_OP_KIND_COMPLEMENT ->
                 "Arith.complement(${intExpr(p, operand, scope)}, ${op.modulus}L)"
+
             else -> "Arith.remainderMap(${intExpr(p, operand, scope)}, ${longList(op.remainderValuesList)})"
         }
     }
@@ -242,8 +291,10 @@ internal class Emitter(private val bundle: LoadedBundle) {
         return when (op.mapping) {
             Rules.CharMapping.CHAR_MAPPING_DIGIT_VALUE ->
                 "Arith.weightedSumDigits($value, $weights, $alignment)"
+
             Rules.CharMapping.CHAR_MAPPING_ALNUM_BASE36 ->
                 "Arith.weightedSumBase36($value, $weights, $alignment)"
+
             else ->
                 "Arith.weightedSumAlphabet($value, $weights, $alignment, ${codePoints(op.alphabet)})"
         }
@@ -262,19 +313,27 @@ internal class Emitter(private val bundle: LoadedBundle) {
         fun int(i: Int) = intExpr(p, node.getInputNodes(i), scope)
         return when (op.kind) {
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_LUHN -> "Ck.luhn(${str(0)}, $key)"
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ISO7064_MOD97_10 -> "Ck.iso7064Mod97(${str(0)}, $key)"
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_DIGIT ->
                 "Ck.compareDigit(${int(0)}, ${str(1)}, ${op.index}, $key)"
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_SLICE ->
                 "Ck.compareSlice(${int(0)}, ${str(1)}, ${op.start}, ${op.end}, $key)"
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_CONSTANT ->
                 "Ck.compareConstant(${int(0)}, ${op.constant}L, $key)"
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_UNSUPPORTED ->
                 "Ck.declaredUnsupported(${reason(op.reasonCode)}, $key)"
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ALL_CHECKS ->
                 branches("Ck.allChecks", p, node, scope, indent)
+
             Rules.ChecksumOpKind.CHECKSUM_OP_KIND_ANY_CHECK ->
                 branches("Ck.anyCheck", p, node, scope, indent)
+
             else -> choose(p, node, scope, indent)
         }
     }
@@ -344,26 +403,37 @@ internal class Emitter(private val bundle: LoadedBundle) {
         when (op.kind) {
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_SEQUENCE ->
                 for (operand in node.inputNodesList) canonicalizationStatements(p, operand, scope, indent, out)
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_TRIM_WHITESPACE ->
                 out.appendLine("${indent}b.trimWhitespace()")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_REMOVE_WHITESPACE ->
                 out.appendLine("${indent}b.removeWhitespace()")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_UPPERCASE_ASCII ->
                 out.appendLine("${indent}b.uppercaseAscii()")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_REMOVE_CHARS ->
                 out.appendLine("${indent}b.removeChars(${sortedSet(op.text)})")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_REPLACE_PREFIX ->
                 out.appendLine("${indent}b.replacePrefix(${codePoints(op.text)}, ${codePoints(op.replacement)})")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_PREPEND ->
                 out.appendLine("${indent}b.prepend(${codePoints(op.text)})")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_APPEND ->
                 out.appendLine("${indent}b.append(${codePoints(op.text)})")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_INSERT ->
                 out.appendLine("${indent}b.insert(${op.index}, ${codePoints(op.text)})")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_LEFT_PAD ->
                 out.appendLine("${indent}b.leftPad(${op.length}, ${Cp.of(op.text)[0]})")
+
             Rules.CanonicalizationOpKind.CANONICALIZATION_OP_KIND_PREPEND_COUNTRY_IF_MISSING ->
                 out.appendLine("${indent}prependCountryIfMissing(${scope.target}, b)")
+
             else -> {
                 val predicate = boolExpr(p, node.getInputNodes(0), scope)
                 out.appendLine("${indent}if ($predicate) {")
@@ -380,79 +450,70 @@ internal class Emitter(private val bundle: LoadedBundle) {
     private fun programsOfKind(kind: Rules.ProgramKind): List<Rules.Program> =
         bundle.proto.programsList.filter { it.kind == kind }
 
-    private fun emitCanonicalizers(): String = buildString {
-        append(header)
-        appendLine("import io.libbusinessid.ValidationProfile")
-        appendLine("import io.libbusinessid.runtime.Ascii")
-        appendLine("import io.libbusinessid.runtime.CanonBuffer")
-        appendLine("import io.libbusinessid.runtime.CpView")
-        appendLine("import io.libbusinessid.runtime.Pred")
-        appendLine("import io.libbusinessid.runtime.Txt")
-        appendLine()
-        for (p in programsOfKind(Rules.ProgramKind.PROGRAM_KIND_CANONICALIZATION)) {
-            val body = StringBuilder()
-            canonicalizationStatements(p, p.rootNode, CANON_SCOPE, "    ", body)
-            appendLine("@Suppress(\"UNUSED_PARAMETER\")")
-            appendLine("internal fun canon_${p.id}(b: CanonBuffer, profile: ValidationProfile, target: Int) {")
-            append(body)
-            appendLine("}")
-            appendLine()
-        }
-    }
+    private val runtimeImports = listOf(
+        "io.libbusinessid.ReasonCode",
+        "io.libbusinessid.ValidationProfile",
+        "io.libbusinessid.internal.EvalContext",
+        "io.libbusinessid.runtime.Alignment",
+        "io.libbusinessid.runtime.Arith",
+        "io.libbusinessid.runtime.AssertionFailure",
+        "io.libbusinessid.runtime.CanonBuffer",
+        "io.libbusinessid.runtime.ChecksumOutcome",
+        "io.libbusinessid.runtime.Ck",
+        "io.libbusinessid.runtime.CpView",
+        "io.libbusinessid.runtime.Pred",
+        "io.libbusinessid.runtime.Txt",
+    )
 
-    private fun emitFormats(): String = buildString {
-        append(header)
-        appendLine("import io.libbusinessid.ReasonCode")
-        appendLine("import io.libbusinessid.ValidationProfile")
-        appendLine("import io.libbusinessid.internal.EvalContext")
-        appendLine("import io.libbusinessid.runtime.Arith")
-        appendLine("import io.libbusinessid.runtime.AssertionFailure")
-        appendLine("import io.libbusinessid.runtime.CpView")
-        appendLine("import io.libbusinessid.runtime.Pred")
-        appendLine("import io.libbusinessid.runtime.Txt")
-        appendLine()
-        for (p in programsOfKind(Rules.ProgramKind.PROGRAM_KIND_FORMAT)) {
-            val body = StringBuilder()
-            assertionStatements(p, p.rootNode, FORMAT_SCOPE, body)
-            appendLine("@Suppress(\"UNUSED_PARAMETER\")")
-            appendLine("internal fun fmt_${p.id}(subject: CpView?, ctx: EvalContext): AssertionFailure? {")
-            append(body)
-            appendLine("    return null")
-            appendLine("}")
-            appendLine()
-            if (p.hasSubjectNode()) {
-                appendLine("internal fun fmt_${p.id}_subject(ctx: EvalContext): CpView? =")
-                appendLine("    " + stringExpr(p, p.subjectNode, FORMAT_SCOPE.copyWithoutSubject()))
+    private fun emitCanonicalizers(): String = withImports(
+        buildString {
+            for (p in programsOfKind(Rules.ProgramKind.PROGRAM_KIND_CANONICALIZATION)) {
+                val body = StringBuilder()
+                canonicalizationStatements(p, p.rootNode, CANON_SCOPE, "    ", body)
+                appendLine("@Suppress(\"UNUSED_PARAMETER\")")
+                appendLine("internal fun canon_${p.id}(b: CanonBuffer, profile: ValidationProfile, target: Int) {")
+                append(body)
+                appendLine("}")
                 appendLine()
             }
-        }
-    }
+        },
+    )
 
-    private fun emitChecksums(): String = buildString {
-        append(header)
-        appendLine("import io.libbusinessid.ReasonCode")
-        appendLine("import io.libbusinessid.ValidationProfile")
-        appendLine("import io.libbusinessid.internal.EvalContext")
-        appendLine("import io.libbusinessid.runtime.Alignment")
-        appendLine("import io.libbusinessid.runtime.Arith")
-        appendLine("import io.libbusinessid.runtime.ChecksumOutcome")
-        appendLine("import io.libbusinessid.runtime.Ck")
-        appendLine("import io.libbusinessid.runtime.CpView")
-        appendLine("import io.libbusinessid.runtime.Pred")
-        appendLine("import io.libbusinessid.runtime.Txt")
-        appendLine()
-        for (p in programsOfKind(Rules.ProgramKind.PROGRAM_KIND_CHECKSUM)) {
-            appendLine("@Suppress(\"UNUSED_PARAMETER\")")
-            appendLine("internal fun ck_${p.id}(subject: CpView?, ctx: EvalContext): ChecksumOutcome =")
-            appendLine("    " + checksumExpr(p, p.rootNode, FORMAT_SCOPE, "    "))
-            appendLine()
-            if (p.hasSubjectNode()) {
-                appendLine("internal fun ck_${p.id}_subject(ctx: EvalContext): CpView? =")
-                appendLine("    " + stringExpr(p, p.subjectNode, FORMAT_SCOPE.copyWithoutSubject()))
+    private fun emitFormats(): String = withImports(
+        buildString {
+            for (p in programsOfKind(Rules.ProgramKind.PROGRAM_KIND_FORMAT)) {
+                val body = StringBuilder()
+                assertionStatements(p, p.rootNode, FORMAT_SCOPE, body)
+                appendLine("@Suppress(\"UNUSED_PARAMETER\")")
+                appendLine("internal fun fmt_${p.id}(subject: CpView?, ctx: EvalContext): AssertionFailure? {")
+                append(body)
+                appendLine("    return null")
+                appendLine("}")
                 appendLine()
+                if (p.hasSubjectNode()) {
+                    appendLine("internal fun fmt_${p.id}_subject(ctx: EvalContext): CpView? =")
+                    appendLine("    " + stringExpr(p, p.subjectNode, FORMAT_SCOPE.copyWithoutSubject()))
+                    appendLine()
+                }
             }
-        }
-    }
+        },
+    )
+
+    private fun emitChecksums(): String = withImports(
+        buildString {
+            for (p in programsOfKind(Rules.ProgramKind.PROGRAM_KIND_CHECKSUM)) {
+                appendLine("@Suppress(\"UNUSED_PARAMETER\")")
+                appendLine("internal fun ck_${p.id}(subject: CpView?, ctx: EvalContext): ChecksumOutcome =")
+                appendLine("    " + checksumExpr(p, p.rootNode, FORMAT_SCOPE, "    "))
+                appendLine()
+                if (p.hasSubjectNode()) {
+                    appendLine("internal fun ck_${p.id}_subject(ctx: EvalContext): CpView? =")
+                    appendLine("    " + stringExpr(p, p.subjectNode, FORMAT_SCOPE.copyWithoutSubject()))
+                    appendLine()
+                }
+            }
+        },
+    )
 
     private fun Scope.copyWithoutSubject(): Scope = Scope(value, "null", target, profile)
 

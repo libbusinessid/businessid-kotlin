@@ -67,18 +67,24 @@ class EmittedCoverageDriverTest {
                     yield(intArrayOf(number, wireType, i, next))
                     i = next
                 }
+
                 1 -> {
-                    yield(intArrayOf(number, wireType, i, i + 8)); i += 8
+                    yield(intArrayOf(number, wireType, i, i + 8))
+                    i += 8
                 }
+
                 5 -> {
-                    yield(intArrayOf(number, wireType, i, i + 4)); i += 4
+                    yield(intArrayOf(number, wireType, i, i + 4))
+                    i += 4
                 }
+
                 2 -> {
                     val (length, afterLength) = readVarint(b, i)
                     val end = afterLength + length.toInt()
                     yield(intArrayOf(number, wireType, afterLength, end))
                     i = end
                 }
+
                 else -> error("wire type $wireType")
             }
         }
@@ -99,10 +105,15 @@ class EmittedCoverageDriverTest {
                 val text = { String(bytes, inner[2], inner[3] - inner[2], Charsets.UTF_8) }
                 when (inner[0]) {
                     3 -> kind = text()
+
                     4 -> country = text()
+
                     5 -> input = text()
+
                     6 -> profile = text()
+
                     7 -> operation = readVarint(bytes, inner[2]).first.toInt()
+
                     // Every other field number, field 8 included, is skipped.
                     else -> Unit
                 }

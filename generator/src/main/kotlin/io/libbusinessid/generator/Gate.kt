@@ -10,11 +10,7 @@ package io.libbusinessid.generator
  * @property check the number of the load check that refused it, from `ir.md` section 10.
  * @property detail a human readable explanation, not normative.
  */
-class RulesetRefusal internal constructor(
-    val errorKind: String,
-    val check: Int,
-    val detail: String,
-)
+class RulesetRefusal internal constructor(val errorKind: String, val check: Int, val detail: String)
 
 /**
  * The only entry point outside this module: submit bytes, learn whether the
@@ -25,11 +21,10 @@ class RulesetRefusal internal constructor(
  */
 object RulesetGate {
     /** Returns null when the ruleset is acceptable, or the refusal that stops generation. */
-    fun inspect(bytes: ByteArray): RulesetRefusal? =
-        try {
-            Loader.load(bytes)
-            null
-        } catch (e: RulesetException) {
-            RulesetRefusal(e.errorKind.wireName, e.check, e.message)
-        }
+    fun inspect(bytes: ByteArray): RulesetRefusal? = try {
+        Loader.load(bytes)
+        null
+    } catch (e: RulesetException) {
+        RulesetRefusal(e.errorKind.wireName, e.check, e.message)
+    }
 }

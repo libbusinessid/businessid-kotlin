@@ -22,12 +22,11 @@ import org.junit.jupiter.api.Test
  */
 class ProtobufRuntimeTest {
     /** A minimal, well formed encoding of a `RuleBundle` header. */
-    private fun bundleHeader(): ByteArray =
-        Rules.RuleBundle.newBuilder()
-            .setFormatVersion(1)
-            .setRulesVersion("2026.08.0")
-            .build()
-            .toByteArray()
+    private fun bundleHeader(): ByteArray = Rules.RuleBundle.newBuilder()
+        .setFormatVersion(1)
+        .setRulesVersion("2026.08.0")
+        .build()
+        .toByteArray()
 
     private fun varintKey(number: Int, wireType: Int): ByteArray {
         val key = (number shl 3) or wireType

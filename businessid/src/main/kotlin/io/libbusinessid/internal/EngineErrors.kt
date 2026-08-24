@@ -17,11 +17,11 @@ import io.libbusinessid.BusinessIdEngineException
  * Ordinary user input never reaches here: a value the rules reject produces a
  * report.
  */
-internal inline fun <T> guardEngineErrors(step: String, body: () -> T): T =
-    try {
-        body()
-    } catch (e: ArithmeticException) {
-        throw BusinessIdEngineException("the $step program overflowed a checked integer", e)
-    } catch (e: IndexOutOfBoundsException) {
-        throw BusinessIdEngineException("the $step program addressed outside a view", e)
-    }
+@Suppress("TooGenericExceptionCaught")
+internal inline fun <T> guardEngineErrors(step: String, body: () -> T): T = try {
+    body()
+} catch (e: ArithmeticException) {
+    throw BusinessIdEngineException("the $step program overflowed a checked integer", e)
+} catch (e: IndexOutOfBoundsException) {
+    throw BusinessIdEngineException("the $step program addressed outside a view", e)
+}

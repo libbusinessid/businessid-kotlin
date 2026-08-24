@@ -10,7 +10,6 @@
 package io.libbusinessid.generated
 
 import io.libbusinessid.ReasonCode
-import io.libbusinessid.ValidationProfile
 import io.libbusinessid.internal.EvalContext
 import io.libbusinessid.runtime.Alignment
 import io.libbusinessid.runtime.Arith
@@ -375,4 +374,3 @@ internal fun ck_156(subject: CpView?, ctx: EvalContext): ChecksumOutcome =
             Ck.compareConstant(Arith.modulo(Arith.weightedSumDigits(Txt.slice(Txt.sliceFrom(subject, 2), 0, 9), K86, Alignment.LEFT), 97L), 42L, null),
         )
     )
-

@@ -59,13 +59,7 @@ internal object Ck {
 
     /** `compare_slice(int_expr, string_expr, start, end)`. */
     @JvmStatic
-    internal fun compareSlice(
-        value: Long?,
-        v: CpView?,
-        start: Int,
-        end: Int,
-        messageKey: String?,
-    ): ChecksumOutcome {
+    internal fun compareSlice(value: Long?, v: CpView?, start: Int, end: Int, messageKey: String?): ChecksumOutcome {
         if (value == null) return ChecksumOutcome.unsupported(messageKey)
         val slice = Txt.slice(v, start, end) ?: return ChecksumOutcome.unsupported(messageKey)
         val actual = Arith.digitsToInteger(slice) ?: return ChecksumOutcome.unsupported(messageKey)

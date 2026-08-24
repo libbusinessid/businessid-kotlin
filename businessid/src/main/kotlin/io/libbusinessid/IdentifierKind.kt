@@ -43,7 +43,8 @@ public value class IdentifierKind(public val value: String) {
          *
          * Accepted aliases: `it_codice_fiscale_impresa`.
          */
-        public val CODICE_FISCALE_IMPRESA: IdentifierKind = IdentifierKind("codice_fiscale_impresa")
+        public val CODICE_FISCALE_IMPRESA: IdentifierKind =
+            IdentifierKind("codice_fiscale_impresa")
 
         /**
          * The `company_number` kind, defined for GB.
@@ -116,7 +117,8 @@ public value class IdentifierKind(public val value: String) {
         public val EORI: IdentifierKind = IdentifierKind("eori")
 
         /**
-         * The `euid` kind, defined for AT, BE, BG, CY, CZ, DE, DK, EE, EL, ES, FI, FR, HR, HU, IE, IT, LT, LU, LV, MT, NL, PL, PT, RO, SE, SI, SK.
+         * The `euid` kind, defined for AT, BE, BG, CY, CZ, DE, DK, EE, EL, ES, FI, FR, HR, HU, IE, IT, LT, LU, LV, MT,
+         * NL, PL, PT, RO, SE, SI, SK.
          */
         public val EUID: IdentifierKind = IdentifierKind("euid")
 
@@ -160,7 +162,8 @@ public value class IdentifierKind(public val value: String) {
          *
          * Accepted aliases: `lt_juridinio_asmens_kodas`.
          */
-        public val JURIDINIO_ASMENS_KODAS: IdentifierKind = IdentifierKind("juridinio_asmens_kodas")
+        public val JURIDINIO_ASMENS_KODAS: IdentifierKind =
+            IdentifierKind("juridinio_asmens_kodas")
 
         /**
          * The `krs` kind, defined for PL.
@@ -266,7 +269,8 @@ public value class IdentifierKind(public val value: String) {
         public val USCC: IdentifierKind = IdentifierKind("uscc")
 
         /**
-         * The `vat` kind, defined for AT, BE, BG, CY, CZ, DE, DK, EE, ES, FI, FR, GB, GR, HR, HU, IE, IS, IT, LI, LU, LV, MT, NL, NO, PL, PT, RO, SE, SI, SK, XI.
+         * The `vat` kind, defined for AT, BE, BG, CY, CZ, DE, DK, EE, ES, FI, FR, GB, GR, HR, HU, IE, IS, IT, LI, LU,
+         * LV, MT, NL, NO, PL, PT, RO, SE, SI, SK, XI.
          *
          * Accepted aliases: `vat_id`, `vat_number`.
          */

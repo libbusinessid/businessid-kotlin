@@ -82,11 +82,13 @@ class ReasonCodeReachabilityTest {
             val step = call()
             val allowed = when (step.status) {
                 StepStatus.VALID -> setOf(ReasonCode.OK)
+
                 StepStatus.NOT_RUN -> setOf(
                     ReasonCode.NOT_REQUESTED,
                     ReasonCode.NOT_RUN_FORMAT_INVALID,
                     ReasonCode.NOT_RUN_FORMAT_UNSUPPORTED,
                 )
+
                 StepStatus.INVALID -> setOf(
                     ReasonCode.EMPTY,
                     ReasonCode.INVALID_LENGTH,
@@ -95,6 +97,7 @@ class ReasonCodeReachabilityTest {
                     ReasonCode.INVALID_CHECKSUM,
                     ReasonCode.COUNTRY_MISMATCH,
                 )
+
                 StepStatus.UNSUPPORTED -> ReasonCode.entries.toSet() - setOf(ReasonCode.OK)
             }
             assert(step.reasonCode in allowed) { "${step.status} carries ${step.reasonCode}" }
@@ -109,7 +112,12 @@ class ReasonCodeReachabilityTest {
             assertEquals(profile, ValidationProfile.ofWireName(profile.wireName))
         }
         assertEquals(null, ValidationProfile.ofWireName("lenient"))
-        assertEquals(setOf("valid", "invalid", "unsupported", "not_run"), StepStatus.entries.map { it.wireName }.toSet())
+        assertEquals(
+            setOf("valid", "invalid", "unsupported", "not_run"),
+            StepStatus.entries.map {
+                it.wireName
+            }.toSet(),
+        )
         assertEquals(setOf("format", "checksum", "registry"), ValidationLevel.entries.map { it.wireName }.toSet())
     }
 }

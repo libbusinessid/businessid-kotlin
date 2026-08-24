@@ -74,7 +74,9 @@ internal object Capabilities {
         StringOpKind.STRING_OP_KIND_VALUE,
         StringOpKind.STRING_OP_KIND_SUBJECT,
         -> CORE
+
         StringOpKind.STRING_OP_KIND_COUNTRY_CODE -> intArrayOf(CORE_GRAPH_V1, IDENTIFIER_DISPATCH_V1)
+
         StringOpKind.STRING_OP_KIND_SLICE,
         StringOpKind.STRING_OP_KIND_SLICE_FROM,
         StringOpKind.STRING_OP_KIND_SLICE_TO,
@@ -83,25 +85,31 @@ internal object Capabilities {
         StringOpKind.STRING_OP_KIND_STRIP_PREFIX,
         StringOpKind.STRING_OP_KIND_CONCAT,
         -> CORE_VIEWS
+
         else -> CORE
     }
 
     fun of(kind: IntegerOpKind): IntArray = when (kind) {
         IntegerOpKind.INTEGER_OP_KIND_WEIGHTED_SUM ->
             intArrayOf(CORE_GRAPH_V1, CHECKSUM_TRISTATE_V1, CHECKSUM_WEIGHTED_V1)
+
         else -> CORE_TRISTATE
     }
 
     fun of(kind: PredicateOpKind): IntArray = when (kind) {
         PredicateOpKind.PREDICATE_OP_KIND_IS_ABSENT -> CORE_VIEWS
+
         PredicateOpKind.PREDICATE_OP_KIND_ASCII_DIGITS,
         PredicateOpKind.PREDICATE_OP_KIND_ASCII_UPPER_LETTERS,
         PredicateOpKind.PREDICATE_OP_KIND_ASCII_ALPHANUMERIC,
         PredicateOpKind.PREDICATE_OP_KIND_ASCII_CHARSET,
         -> CORE_ASCII
+
         PredicateOpKind.PREDICATE_OP_KIND_PROFILE_IS -> intArrayOf(CORE_GRAPH_V1, PROFILES_V1)
+
         PredicateOpKind.PREDICATE_OP_KIND_INTEGER_IS ->
             intArrayOf(CORE_GRAPH_V1, CHECKSUM_TRISTATE_V1, CHECKSUM_INTEGER_PREDICATE_V1)
+
         else -> CORE_ASSERT
     }
 
@@ -110,10 +118,13 @@ internal object Capabilities {
         CanonicalizationOpKind.CANONICALIZATION_OP_KIND_REMOVE_WHITESPACE,
         CanonicalizationOpKind.CANONICALIZATION_OP_KIND_UPPERCASE_ASCII,
         -> CORE_ASCII_CANON
+
         CanonicalizationOpKind.CANONICALIZATION_OP_KIND_PREPEND_COUNTRY_IF_MISSING ->
             intArrayOf(CORE_GRAPH_V1, CANONICALIZATION_BASIC_V1, IDENTIFIER_DISPATCH_V1)
+
         CanonicalizationOpKind.CANONICALIZATION_OP_KIND_WHEN ->
             intArrayOf(CORE_GRAPH_V1, CANONICALIZATION_CONDITIONAL_V1)
+
         else -> CORE_CANON
     }
 
@@ -123,16 +134,20 @@ internal object Capabilities {
     fun of(kind: ChecksumOpKind): IntArray = when (kind) {
         ChecksumOpKind.CHECKSUM_OP_KIND_LUHN ->
             intArrayOf(CORE_GRAPH_V1, CHECKSUM_TRISTATE_V1, CHECKSUM_LUHN_V1)
+
         ChecksumOpKind.CHECKSUM_OP_KIND_ISO7064_MOD97_10 ->
             intArrayOf(CORE_GRAPH_V1, CHECKSUM_TRISTATE_V1, CHECKSUM_MOD97_V1)
+
         ChecksumOpKind.CHECKSUM_OP_KIND_COMPARE_CONSTANT ->
             intArrayOf(CORE_GRAPH_V1, CHECKSUM_TRISTATE_V1, CHECKSUM_COMPARE_CONSTANT_V1)
+
         else -> CORE_TRISTATE
     }
 
     fun of(kind: CallOpKind): IntArray = when (kind) {
         CallOpKind.CALL_OP_KIND_FORMAT ->
             intArrayOf(CORE_GRAPH_V1, CAPTURES_AND_CALLS_V1, FORMAT_ASSERTIONS_V1)
+
         else -> intArrayOf(CORE_GRAPH_V1, CAPTURES_AND_CALLS_V1, CHECKSUM_TRISTATE_V1)
     }
 }

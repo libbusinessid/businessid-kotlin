@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test
  * Every one of them is false on an absent operand except `is_absent`, which is
  * the only predicate that observes absence as true.
  */
-class PredicatesTest {
+class PredTest {
     @Test
     fun `is_empty is true only for a present empty view`() {
         assertTrue(Pred.isEmpty(view("")))

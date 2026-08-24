@@ -32,6 +32,15 @@ internal object Wire {
     /** Nesting bound, well above the six levels the schema actually reaches. */
     private const val MAX_DEPTH = 64
 
+    private const val FIELD_NUMBER_SHIFT = 3
+    private const val WIRE_TYPE_MASK = 7L
+    private const val FIXED64_BYTES = 8
+    private const val FIXED32_BYTES = 4
+    private const val VARINT_PAYLOAD_MASK = 0x7FL
+    private const val VARINT_CONTINUATION = 0x80
+    private const val VARINT_PAYLOAD_BITS = 7
+    private const val VARINT_MAX_SHIFT = 63
+
     /** What a scan found. */
     sealed interface Finding {
         /** A field number the schema does not declare, at [path]. */
@@ -80,8 +89,8 @@ internal object Wire {
                 return
             }
             i = keyRead.next
-            val number = (keyRead.value ushr 3).toInt()
-            val wireType = (keyRead.value and 7L).toInt()
+            val number = (keyRead.value ushr FIELD_NUMBER_SHIFT).toInt()
+            val wireType = (keyRead.value and WIRE_TYPE_MASK).toInt()
             if (number == 0) {
                 out += Finding.Malformed(path, "field number 0")
                 return
@@ -110,20 +119,23 @@ internal object Wire {
                     }
                     i = v.next
                 }
+
                 FIXED64 -> {
-                    if (i + 8 > to) {
+                    if (i + FIXED64_BYTES > to) {
                         out += Finding.Malformed(path, "truncated fixed64")
                         return
                     }
-                    i += 8
+                    i += FIXED64_BYTES
                 }
+
                 FIXED32 -> {
-                    if (i + 4 > to) {
+                    if (i + FIXED32_BYTES > to) {
                         out += Finding.Malformed(path, "truncated fixed32")
                         return
                     }
-                    i += 4
+                    i += FIXED32_BYTES
                 }
+
                 LENGTH_DELIMITED -> {
                     val len = readVarint(b, i, to) ?: run {
                         out += Finding.Malformed(path, "truncated length")
@@ -142,10 +154,12 @@ internal object Wire {
                     }
                     i = end
                 }
+
                 START_GROUP, END_GROUP -> {
                     out += Finding.Malformed(path, "group wire type $wireType")
                     return
                 }
+
                 else -> {
                     out += Finding.Malformed(path, "wire type $wireType")
                     return
@@ -163,10 +177,10 @@ internal object Wire {
         while (i < to) {
             val byte = b[i].toInt()
             i++
-            result = result or ((byte.toLong() and 0x7F) shl shift)
-            if (byte and 0x80 == 0) return Varint(result, i)
-            shift += 7
-            if (shift > 63) return null
+            result = result or ((byte.toLong() and VARINT_PAYLOAD_MASK) shl shift)
+            if (byte and VARINT_CONTINUATION == 0) return Varint(result, i)
+            shift += VARINT_PAYLOAD_BITS
+            if (shift > VARINT_MAX_SHIFT) return null
         }
         return null
     }

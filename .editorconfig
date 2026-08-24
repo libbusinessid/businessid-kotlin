@@ -1,0 +1,33 @@
+# Copyright The LibBusinessID Authors.
+# SPDX-License-Identifier: Apache-2.0
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 120
+# The official Kotlin coding conventions, which is what `kotlin.code.style`
+# selects. ktlint's own `ktlint_official` style is a stricter superset that
+# disagrees with the formatter every IDE applies here.
+ktlint_code_style = intellij_idea
+# Every emitted file says so in its header and is never edited by hand.
+ktlint_ignore_back_ticked_identifier = true
+# Files are named after the concern they cover — Predicates, Checksums — rather
+# than after the single object that happens to implement it.
+ktlint_standard_filename = disabled
+
+[businessid/src/main/kotlin/io/libbusinessid/generated/**.kt]
+ktlint = disabled
+
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

@@ -12,7 +12,6 @@ package io.libbusinessid.generated
 import io.libbusinessid.ReasonCode
 import io.libbusinessid.ValidationProfile
 import io.libbusinessid.internal.EvalContext
-import io.libbusinessid.runtime.Arith
 import io.libbusinessid.runtime.AssertionFailure
 import io.libbusinessid.runtime.CpView
 import io.libbusinessid.runtime.Pred
@@ -933,4 +932,3 @@ internal fun fmt_250(subject: CpView?, ctx: EvalContext): AssertionFailure? {
     if (!(Pred.asciiDigits(Txt.sliceFrom(subject, 2)))) return AssertionFailure(ReasonCode.INVALID_CHARACTERS, "vat.xi.characters")
     return null
 }
-

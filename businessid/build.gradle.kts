@@ -96,3 +96,10 @@ tasks.test {
     systemProperty("businessid.jar", jar.get().asFile.absolutePath)
     systemProperty("businessid.pom", pom.get().asFile.absolutePath)
 }
+
+// Emitted sources are machine written and never edited, so they are linted at
+// emission time by the generator rather than judged here. Every one of them
+// carries a header saying so.
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    exclude("**/io/libbusinessid/generated/**")
+}

@@ -6,11 +6,7 @@ package io.libbusinessid.generator
 import libbusinessid.ir.v1.Rules
 
 /** One dispatch target, in the flat index space the emitted code uses. */
-internal class TargetRef(
-    val index: Int,
-    val dispatcherIndex: Int,
-    val proto: Rules.DispatchTarget,
-) {
+internal class TargetRef(val index: Int, val dispatcherIndex: Int, val proto: Rules.DispatchTarget) {
     val isGlobal: Boolean get() = !proto.hasCountryCode()
     val countryCode: String? get() = if (proto.hasCountryCode()) proto.countryCode else null
 }
@@ -20,6 +16,7 @@ internal class TargetRef(
  * needs. Nothing here is mutable and nothing is re-derived later: the emitter
  * reads a settled model.
  */
+@Suppress("LongParameterList")
 internal class LoadedBundle(
     val proto: Rules.RuleBundle,
     val programsById: Map<Int, Rules.Program>,

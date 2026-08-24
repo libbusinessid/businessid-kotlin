@@ -1,0 +1,295 @@
+public final class io/libbusinessid/BusinessIdEngine {
+	public static final field Companion Lio/libbusinessid/BusinessIdEngine$Companion;
+	public final fun canonicalize (Lio/libbusinessid/IdentifierInput;)Lio/libbusinessid/CanonicalizationResult;
+	public final fun canonicalize (Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;)Lio/libbusinessid/CanonicalizationResult;
+	public static synthetic fun canonicalize$default (Lio/libbusinessid/BusinessIdEngine;Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;ILjava/lang/Object;)Lio/libbusinessid/CanonicalizationResult;
+	public final fun capabilities ()Ljava/util/List;
+	public static final fun defaultEngine ()Lio/libbusinessid/BusinessIdEngine;
+	public final fun rulesInfo ()Lio/libbusinessid/RulesInfo;
+	public final fun validate (Lio/libbusinessid/IdentifierInput;)Lio/libbusinessid/ValidationReport;
+	public final fun validate (Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;)Lio/libbusinessid/ValidationReport;
+	public static synthetic fun validate$default (Lio/libbusinessid/BusinessIdEngine;Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;ILjava/lang/Object;)Lio/libbusinessid/ValidationReport;
+	public final fun validateChecksum (Lio/libbusinessid/IdentifierInput;)Lio/libbusinessid/ValidationReport;
+	public final fun validateChecksum (Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;)Lio/libbusinessid/ValidationReport;
+	public static synthetic fun validateChecksum$default (Lio/libbusinessid/BusinessIdEngine;Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;ILjava/lang/Object;)Lio/libbusinessid/ValidationReport;
+	public final fun validateFormat (Lio/libbusinessid/IdentifierInput;)Lio/libbusinessid/ValidationReport;
+	public final fun validateFormat (Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;)Lio/libbusinessid/ValidationReport;
+	public static synthetic fun validateFormat$default (Lio/libbusinessid/BusinessIdEngine;Lio/libbusinessid/IdentifierInput;Lio/libbusinessid/ValidationOptions;ILjava/lang/Object;)Lio/libbusinessid/ValidationReport;
+}
+
+public final class io/libbusinessid/BusinessIdEngine$Companion {
+	public final fun defaultEngine ()Lio/libbusinessid/BusinessIdEngine;
+}
+
+public final class io/libbusinessid/BusinessIdEngineException : java/lang/RuntimeException {
+}
+
+public final class io/libbusinessid/CanonicalizationResult {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/libbusinessid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/libbusinessid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-okbq2dM ()Ljava/lang/String;
+	public final fun component10 ()Lio/libbusinessid/ReasonCode;
+	public final fun component11 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lio/libbusinessid/ValidationProfile;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()I
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Lio/libbusinessid/StepStatus;
+	public final fun copy-RMpMufU (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/libbusinessid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;)Lio/libbusinessid/CanonicalizationResult;
+	public static synthetic fun copy-RMpMufU$default (Lio/libbusinessid/CanonicalizationResult;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/libbusinessid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;ILjava/lang/Object;)Lio/libbusinessid/CanonicalizationResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanonicalValue ()Ljava/lang/String;
+	public final fun getCountryCode ()Ljava/lang/String;
+	public final fun getEngineVersion ()Ljava/lang/String;
+	public final fun getFormatVersion ()I
+	public final fun getInputValue ()Ljava/lang/String;
+	public final fun getKind-okbq2dM ()Ljava/lang/String;
+	public final fun getKindToken ()Ljava/lang/String;
+	public final fun getMessageKey ()Ljava/lang/String;
+	public final fun getProfile ()Lio/libbusinessid/ValidationProfile;
+	public final fun getReasonCode ()Lio/libbusinessid/ReasonCode;
+	public final fun getRulesVersion ()Ljava/lang/String;
+	public final fun getStatus ()Lio/libbusinessid/StepStatus;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/Capability {
+	public fun <init> (ILjava/lang/String;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (ILjava/lang/String;)Lio/libbusinessid/Capability;
+	public static synthetic fun copy$default (Lio/libbusinessid/Capability;ILjava/lang/String;ILjava/lang/Object;)Lio/libbusinessid/Capability;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCapabilityName ()Ljava/lang/String;
+	public final fun getId ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/IdentifierInput {
+	public static final field Companion Lio/libbusinessid/IdentifierInput$Companion;
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-okbq2dM ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy-VGXNs2g (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/libbusinessid/IdentifierInput;
+	public static synthetic fun copy-VGXNs2g$default (Lio/libbusinessid/IdentifierInput;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/libbusinessid/IdentifierInput;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCountryCode ()Ljava/lang/String;
+	public final fun getKind-okbq2dM ()Ljava/lang/String;
+	public final fun getKindToken ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static final fun of (Ljava/lang/String;Ljava/lang/String;)Lio/libbusinessid/IdentifierInput;
+	public static final fun of (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/libbusinessid/IdentifierInput;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/IdentifierInput$Companion {
+	public final fun of (Ljava/lang/String;Ljava/lang/String;)Lio/libbusinessid/IdentifierInput;
+	public final fun of (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/libbusinessid/IdentifierInput;
+	public static synthetic fun of$default (Lio/libbusinessid/IdentifierInput$Companion;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/libbusinessid/IdentifierInput;
+}
+
+public final class io/libbusinessid/IdentifierKind {
+	public static final field Companion Lio/libbusinessid/IdentifierKind$Companion;
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lio/libbusinessid/IdentifierKind;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/IdentifierKind$Companion {
+	public final fun getCEGJEGYZEKSZAM-okbq2dM ()Ljava/lang/String;
+	public final fun getCNPJ-okbq2dM ()Ljava/lang/String;
+	public final fun getCODICE_FISCALE_IMPRESA-okbq2dM ()Ljava/lang/String;
+	public final fun getCOMPANY_NUMBER-okbq2dM ()Ljava/lang/String;
+	public final fun getCORPORATE_NUMBER-okbq2dM ()Ljava/lang/String;
+	public final fun getCRO_NUMBER-okbq2dM ()Ljava/lang/String;
+	public final fun getCUI-okbq2dM ()Ljava/lang/String;
+	public final fun getCVR-okbq2dM ()Ljava/lang/String;
+	public final fun getDUNS-okbq2dM ()Ljava/lang/String;
+	public final fun getEIK-okbq2dM ()Ljava/lang/String;
+	public final fun getEIN-okbq2dM ()Ljava/lang/String;
+	public final fun getENTERPRISE_NUMBER-okbq2dM ()Ljava/lang/String;
+	public final fun getEORI-okbq2dM ()Ljava/lang/String;
+	public final fun getEUID-okbq2dM ()Ljava/lang/String;
+	public final fun getFIRMENBUCHNUMMER-okbq2dM ()Ljava/lang/String;
+	public final fun getGEMI-okbq2dM ()Ljava/lang/String;
+	public final fun getHANDELSREGISTERNUMMER-okbq2dM ()Ljava/lang/String;
+	public final fun getHE_NUMBER-okbq2dM ()Ljava/lang/String;
+	public final fun getICO-okbq2dM ()Ljava/lang/String;
+	public final fun getJURIDINIO_ASMENS_KODAS-okbq2dM ()Ljava/lang/String;
+	public final fun getKRS-okbq2dM ()Ljava/lang/String;
+	public final fun getKVK-okbq2dM ()Ljava/lang/String;
+	public final fun getLEI-okbq2dM ()Ljava/lang/String;
+	public final fun getMATICNA_STEVILKA-okbq2dM ()Ljava/lang/String;
+	public final fun getMBR_NUMBER-okbq2dM ()Ljava/lang/String;
+	public final fun getMBS-okbq2dM ()Ljava/lang/String;
+	public final fun getNIF-okbq2dM ()Ljava/lang/String;
+	public final fun getNIPC-okbq2dM ()Ljava/lang/String;
+	public final fun getORGANISATIONSNUMMER-okbq2dM ()Ljava/lang/String;
+	public final fun getRCS_NUMBER-okbq2dM ()Ljava/lang/String;
+	public final fun getREGISTRACIJAS_NUMURS-okbq2dM ()Ljava/lang/String;
+	public final fun getREGISTRIKOOD-okbq2dM ()Ljava/lang/String;
+	public final fun getSIREN-okbq2dM ()Ljava/lang/String;
+	public final fun getSIRET-okbq2dM ()Ljava/lang/String;
+	public final fun getUSCC-okbq2dM ()Ljava/lang/String;
+	public final fun getVAT-okbq2dM ()Ljava/lang/String;
+	public final fun getY_TUNNUS-okbq2dM ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/ReasonCode : java/lang/Enum {
+	public static final field CHECKSUM_NOT_PUBLISHED Lio/libbusinessid/ReasonCode;
+	public static final field COUNTRY_MISMATCH Lio/libbusinessid/ReasonCode;
+	public static final field EMPTY Lio/libbusinessid/ReasonCode;
+	public static final field INCOMPATIBLE_RULESET Lio/libbusinessid/ReasonCode;
+	public static final field INPUT_TOO_LONG Lio/libbusinessid/ReasonCode;
+	public static final field INVALID_CHARACTERS Lio/libbusinessid/ReasonCode;
+	public static final field INVALID_CHECKSUM Lio/libbusinessid/ReasonCode;
+	public static final field INVALID_ENCODING Lio/libbusinessid/ReasonCode;
+	public static final field INVALID_FORMAT Lio/libbusinessid/ReasonCode;
+	public static final field INVALID_LENGTH Lio/libbusinessid/ReasonCode;
+	public static final field INVALID_RULESET Lio/libbusinessid/ReasonCode;
+	public static final field MISSING_COUNTRY_CODE Lio/libbusinessid/ReasonCode;
+	public static final field NOT_REQUESTED Lio/libbusinessid/ReasonCode;
+	public static final field NOT_RUN_FORMAT_INVALID Lio/libbusinessid/ReasonCode;
+	public static final field NOT_RUN_FORMAT_UNSUPPORTED Lio/libbusinessid/ReasonCode;
+	public static final field OK Lio/libbusinessid/ReasonCode;
+	public static final field REGISTRY_NOT_CONFIGURED Lio/libbusinessid/ReasonCode;
+	public static final field UNSUPPORTED_CHECKSUM Lio/libbusinessid/ReasonCode;
+	public static final field UNSUPPORTED_COUNTRY Lio/libbusinessid/ReasonCode;
+	public static final field UNSUPPORTED_FORMAT Lio/libbusinessid/ReasonCode;
+	public static final field UNSUPPORTED_KIND Lio/libbusinessid/ReasonCode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/libbusinessid/ReasonCode;
+	public static fun values ()[Lio/libbusinessid/ReasonCode;
+}
+
+public final class io/libbusinessid/RulesInfo {
+	public fun <init> (Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/util/List;)Lio/libbusinessid/RulesInfo;
+	public static synthetic fun copy$default (Lio/libbusinessid/RulesInfo;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/libbusinessid/RulesInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEngineVersion ()Ljava/lang/String;
+	public final fun getFormatVersion ()I
+	public final fun getRulesVersion ()Ljava/lang/String;
+	public final fun getSourceDigest ()Ljava/lang/String;
+	public final fun getSupportedKinds ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/StepResult {
+	public fun <init> (Lio/libbusinessid/ValidationLevel;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;)V
+	public synthetic fun <init> (Lio/libbusinessid/ValidationLevel;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/libbusinessid/ValidationLevel;
+	public final fun component2 ()Lio/libbusinessid/StepStatus;
+	public final fun component3 ()Lio/libbusinessid/ReasonCode;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Lio/libbusinessid/ValidationLevel;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;)Lio/libbusinessid/StepResult;
+	public static synthetic fun copy$default (Lio/libbusinessid/StepResult;Lio/libbusinessid/ValidationLevel;Lio/libbusinessid/StepStatus;Lio/libbusinessid/ReasonCode;Ljava/lang/String;ILjava/lang/Object;)Lio/libbusinessid/StepResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLevel ()Lio/libbusinessid/ValidationLevel;
+	public final fun getMessageKey ()Ljava/lang/String;
+	public final fun getReasonCode ()Lio/libbusinessid/ReasonCode;
+	public final fun getStatus ()Lio/libbusinessid/StepStatus;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/StepStatus : java/lang/Enum {
+	public static final field INVALID Lio/libbusinessid/StepStatus;
+	public static final field NOT_RUN Lio/libbusinessid/StepStatus;
+	public static final field UNSUPPORTED Lio/libbusinessid/StepStatus;
+	public static final field VALID Lio/libbusinessid/StepStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/libbusinessid/StepStatus;
+	public static fun values ()[Lio/libbusinessid/StepStatus;
+}
+
+public final class io/libbusinessid/ValidationLevel : java/lang/Enum {
+	public static final field CHECKSUM Lio/libbusinessid/ValidationLevel;
+	public static final field FORMAT Lio/libbusinessid/ValidationLevel;
+	public static final field REGISTRY Lio/libbusinessid/ValidationLevel;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/libbusinessid/ValidationLevel;
+	public static fun values ()[Lio/libbusinessid/ValidationLevel;
+}
+
+public final class io/libbusinessid/ValidationOptions {
+	public fun <init> ()V
+	public fun <init> (Lio/libbusinessid/ValidationProfile;)V
+	public synthetic fun <init> (Lio/libbusinessid/ValidationProfile;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/libbusinessid/ValidationProfile;
+	public final fun copy (Lio/libbusinessid/ValidationProfile;)Lio/libbusinessid/ValidationOptions;
+	public static synthetic fun copy$default (Lio/libbusinessid/ValidationOptions;Lio/libbusinessid/ValidationProfile;ILjava/lang/Object;)Lio/libbusinessid/ValidationOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getProfile ()Lio/libbusinessid/ValidationProfile;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/libbusinessid/ValidationProfile : java/lang/Enum {
+	public static final field COMPATIBLE Lio/libbusinessid/ValidationProfile;
+	public static final field STRICT_CURRENT Lio/libbusinessid/ValidationProfile;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/libbusinessid/ValidationProfile;
+	public static fun values ()[Lio/libbusinessid/ValidationProfile;
+}
+
+public final class io/libbusinessid/ValidationReport {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/libbusinessid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lio/libbusinessid/StepResult;Lio/libbusinessid/StepResult;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-okbq2dM ()Ljava/lang/String;
+	public final fun component10 ()Lio/libbusinessid/StepResult;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lio/libbusinessid/ValidationProfile;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()I
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Lio/libbusinessid/StepResult;
+	public final fun copy-FI90TtE (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/libbusinessid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lio/libbusinessid/StepResult;Lio/libbusinessid/StepResult;)Lio/libbusinessid/ValidationReport;
+	public static synthetic fun copy-FI90TtE$default (Lio/libbusinessid/ValidationReport;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/libbusinessid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lio/libbusinessid/StepResult;Lio/libbusinessid/StepResult;ILjava/lang/Object;)Lio/libbusinessid/ValidationReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanonicalValue ()Ljava/lang/String;
+	public final fun getChecksum ()Lio/libbusinessid/StepResult;
+	public final fun getCountryCode ()Ljava/lang/String;
+	public final fun getEngineVersion ()Ljava/lang/String;
+	public final fun getFormat ()Lio/libbusinessid/StepResult;
+	public final fun getFormatVersion ()I
+	public final fun getInputValue ()Ljava/lang/String;
+	public final fun getKind-okbq2dM ()Ljava/lang/String;
+	public final fun getKindToken ()Ljava/lang/String;
+	public final fun getProfile ()Lio/libbusinessid/ValidationProfile;
+	public final fun getRulesVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isChecksumValid ()Z
+	public final fun isFormatValid ()Z
+	public final fun isFullyValidated ()Z
+	public final fun isInvalid ()Z
+	public fun toString ()Ljava/lang/String;
+}
+

@@ -32,8 +32,8 @@ val jmhGenerate = tasks.register<JavaExec>("jmhGenerate") {
     dependsOn(tasks.named("compileKotlin"))
     classpath =
         jmhGeneratorClasspath +
-            sourceSets.main.get().output +
-            sourceSets.main.get().runtimeClasspath
+        sourceSets.main.get().output +
+        sourceSets.main.get().runtimeClasspath
     mainClass.set("org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator")
     // Kotlin and Java each get their own output directory; the benchmarks are
     // Kotlin, so that is the one the generator reads.
@@ -52,8 +52,8 @@ val jmhCompile = tasks.register<JavaCompile>("jmhCompileGenerated") {
     source = fileTree(jmhGeneratedSources)
     classpath =
         jmhGeneratorClasspath +
-            sourceSets.main.get().output +
-            sourceSets.main.get().runtimeClasspath
+        sourceSets.main.get().output +
+        sourceSets.main.get().runtimeClasspath
     destinationDirectory.set(layout.buildDirectory.dir("jmh-generated/classes"))
     options.release.set(11)
     // The generated harness is not ours to lint.
@@ -67,10 +67,10 @@ tasks.register<JavaExec>("jmh") {
     mainClass.set("org.openjdk.jmh.Main")
     classpath =
         files(layout.buildDirectory.dir("jmh-generated/classes")) +
-            files(jmhGeneratedResources) +
-            sourceSets.main.get().output +
-            sourceSets.main.get().runtimeClasspath +
-            jmhGeneratorClasspath
+        files(jmhGeneratedResources) +
+        sourceSets.main.get().output +
+        sourceSets.main.get().runtimeClasspath +
+        jmhGeneratorClasspath
     // Defaults keep a CI smoke run short; override with -Pjmh.args.
     args(
         (project.findProperty("jmh.args") as String? ?: "-f 1 -wi 3 -i 5 -r 1s -w 1s")

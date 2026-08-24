@@ -54,21 +54,24 @@ internal class ChecksumOutcome internal constructor(
         private val NOT_PUBLISHED =
             ChecksumOutcome(ChecksumStatus.UNSUPPORTED, ReasonCode.CHECKSUM_NOT_PUBLISHED, null)
 
-        fun invalid(messageKey: String?): ChecksumOutcome =
-            if (messageKey == null) INVALID else ChecksumOutcome(ChecksumStatus.INVALID, ReasonCode.INVALID_CHECKSUM, messageKey)
+        fun invalid(messageKey: String?): ChecksumOutcome = if (messageKey ==
+            null
+        ) {
+            INVALID
+        } else {
+            ChecksumOutcome(ChecksumStatus.INVALID, ReasonCode.INVALID_CHECKSUM, messageKey)
+        }
 
-        fun unsupported(messageKey: String?): ChecksumOutcome =
-            if (messageKey == null) {
-                UNSUPPORTED
-            } else {
-                ChecksumOutcome(ChecksumStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_CHECKSUM, messageKey)
-            }
+        fun unsupported(messageKey: String?): ChecksumOutcome = if (messageKey == null) {
+            UNSUPPORTED
+        } else {
+            ChecksumOutcome(ChecksumStatus.UNSUPPORTED, ReasonCode.UNSUPPORTED_CHECKSUM, messageKey)
+        }
 
-        fun declaredUnsupported(reason: ReasonCode, messageKey: String?): ChecksumOutcome =
-            when {
-                messageKey != null -> ChecksumOutcome(ChecksumStatus.UNSUPPORTED, reason, messageKey)
-                reason == ReasonCode.CHECKSUM_NOT_PUBLISHED -> NOT_PUBLISHED
-                else -> UNSUPPORTED
-            }
+        fun declaredUnsupported(reason: ReasonCode, messageKey: String?): ChecksumOutcome = when {
+            messageKey != null -> ChecksumOutcome(ChecksumStatus.UNSUPPORTED, reason, messageKey)
+            reason == ReasonCode.CHECKSUM_NOT_PUBLISHED -> NOT_PUBLISHED
+            else -> UNSUPPORTED
+        }
     }
 }
