@@ -21,6 +21,13 @@ The first is a pinned copy of the specification; the second is emitted, and
 ./gradlew build            # compile, lint, test, coverage, consumers
 ```
 
+Run it on **JDK 17**, the toolchain this project pins. Detekt and ktlint each
+embed a Kotlin compiler that refuses a class file version newer than the release
+it was built against, and neither offers a way to point at another JVM — on a
+JDK 25 daemon both stop with `25.0.4` before reading a line of your code. CI runs
+them in a job of their own for that reason, and builds and tests the code itself
+across the whole supported range.
+
 Then the shared conformance suite, whose runner comes from `spec` and from
 nowhere else:
 
