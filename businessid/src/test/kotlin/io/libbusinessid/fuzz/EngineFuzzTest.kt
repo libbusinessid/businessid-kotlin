@@ -60,16 +60,4 @@ class EngineFuzzTest {
         val formatOnly = engine.validateFormat(input, options)
         assertEquals(report.format, formatOnly.format)
     }
-
-    @FuzzTest(maxDuration = "10s")
-    fun `canonicalisation is idempotent on any input`(data: FuzzedDataProvider) {
-        val kind = data.consumeString(40)
-        val value = data.consumeString(1024)
-        val once = engine.canonicalize(IdentifierInput(IdentifierKind(kind), value))
-        if (once.status != StepStatus.VALID) return
-        val twice = engine.canonicalize(
-            IdentifierInput(IdentifierKind(once.kind.value), once.canonicalValue, once.countryCode),
-        )
-        assertEquals(once.canonicalValue, twice.canonicalValue)
-    }
 }

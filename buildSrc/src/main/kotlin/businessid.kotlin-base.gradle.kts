@@ -89,6 +89,9 @@ tasks.register<Test>("fuzz") {
         isFailOnNoMatchingTests = false
     }
     environment("JAZZER_FUZZ", "1")
+    // libFuzzer takes over the process, so Jazzer fuzzes one target per JVM and
+    // skips the rest. One fork per target is what makes them all run.
+    forkEvery = 1
     // The scheduled run fuzzes for longer than the smoke run in CI.
     (project.findProperty("fuzz.seconds") as String?)?.let {
         systemProperty("jazzer.max_duration", it + "s")
