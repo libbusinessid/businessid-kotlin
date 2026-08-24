@@ -76,18 +76,24 @@ public class BusinessIdEngine private constructor() {
     public fun rulesInfo(): RulesInfo = RULES_INFO
 
     /** The frozen capability identifiers this engine implements. */
-    public fun capabilities(): List<Capability> = Ruleset.CAPABILITIES
+    public fun capabilities(): List<Capability> = CAPABILITIES
 
     /** Access to the shared engine. */
     public companion object {
         private val INSTANCE = BusinessIdEngine()
+
+        // `List` is read-only by Kotlin's type system and castable from Java.
+        // These two are the only collections the API hands out, so they are
+        // unmodifiable rather than merely typed as read-only.
+        private val CAPABILITIES: List<Capability> =
+            java.util.Collections.unmodifiableList(Ruleset.CAPABILITIES.toList())
 
         private val RULES_INFO = RulesInfo(
             rulesVersion = Ruleset.RULES_VERSION,
             formatVersion = Ruleset.FORMAT_VERSION,
             engineVersion = EngineVersion.VALUE,
             sourceDigest = Ruleset.SOURCE_DIGEST,
-            supportedKinds = Ruleset.KINDS.map { IdentifierKind(it) },
+            supportedKinds = java.util.Collections.unmodifiableList(Ruleset.KINDS.map { IdentifierKind(it) }),
         )
 
         /**

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.test.assertFailsWith
 
 /**
  * The four public operations and the shapes they return.
@@ -194,6 +195,19 @@ class EngineApiTest {
         assertEquals(capabilities.map { it.id }.sorted(), capabilities.map { it.id })
         assertEquals(Capability(1, "CORE_GRAPH_V1"), capabilities.first())
         assertEquals(Capability(42, "CHECKSUM_CUSTOM_ALPHABET_V1"), capabilities.last())
+    }
+
+    @Test
+    fun `the collections the API hands out cannot be modified`() {
+        // Read-only by Kotlin's type system is not the same as unmodifiable, and
+        // a Java caller can cast the first away.
+        @Suppress("UNCHECKED_CAST")
+        val capabilities = engine.capabilities() as MutableList<Capability>
+        assertFailsWith<UnsupportedOperationException> { capabilities.clear() }
+
+        @Suppress("UNCHECKED_CAST")
+        val kinds = engine.rulesInfo().supportedKinds as MutableList<IdentifierKind>
+        assertFailsWith<UnsupportedOperationException> { kinds.removeAt(0) }
     }
 
     @Test
