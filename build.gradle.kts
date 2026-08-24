@@ -8,6 +8,13 @@ plugins {
 // Every Gradle plugin this build applies is on the classpath through buildSrc,
 // pinned by gradle/libs.versions.toml. Nothing resolves a plugin version here.
 
+/** The business version of the ruleset this build compiles in, from rules.lock. */
+val rulesVersion: String = layout.projectDirectory.file("rules.lock").asFile
+    .readLines()
+    .first { it.trimStart().startsWith("rules_version") }
+    .substringAfter('"')
+    .substringBefore('"')
+
 val generatedSourceDir: Directory =
     layout.projectDirectory.dir("businessid/src/main/kotlin/io/libbusinessid/generated")
 
@@ -294,6 +301,7 @@ fun consumerTask(name: String, directory: String, arguments: List<String>) = tas
             "--project-dir",
             workingDir.absolutePath,
             "-Pbusinessid.version=${project.version}",
+            "-Pbusinessid.rules=$rulesVersion",
             "-Pbusinessid.repository=$repository",
             "--no-daemon",
             "--console=plain",

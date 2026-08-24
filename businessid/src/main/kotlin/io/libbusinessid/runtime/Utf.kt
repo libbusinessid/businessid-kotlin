@@ -21,14 +21,29 @@ internal object Utf {
     private const val THREE_BYTE_LENGTH = 3
     private const val FOUR_BYTE_LENGTH = 4
 
+    /** What the platform encoder emits for one unpaired surrogate. */
+    private const val REPLACEMENT_LENGTH = 1
+
     /**
      * UTF-8 length of [s] in bytes, without materialising the encoded form.
      *
-     * An unpaired surrogate has no UTF-8 encoding; it is counted as the three
-     * bytes its code unit would take, which is the only count that does not
-     * depend on a replacement policy. Such input is refused by the encoding
-     * check that follows, so the choice is observable only for text that is both
-     * ill formed and within a few bytes of the limit.
+     * **This engine counts what its own encoder produces.** `ir.md` section 6
+     * step 1 requires the choice to be stated: the input bound is measured
+     * before the encoding check refuses ill formed text, and such text has no
+     * UTF-8 encoding, so the count has to come from somewhere. A Kotlin string
+     * holding one unpaired surrogate encodes to a single replacement byte
+     * through the platform encoder and to three through the encoding that
+     * surrogate would have had. Of the two answers the specification allows —
+     * count what the encoder produces, or refuse the input before measuring it —
+     * this is the first.
+     *
+     * What that buys is an invariant rather than a convention: this function
+     * agrees with `String.toByteArray(UTF_8).size` on every string, well formed
+     * or not, which `UtfTest` states as a property over generated input. The
+     * array is never allocated; only its length is computed.
+     *
+     * The difference is reachable only by text that is both ill formed and
+     * within a few bytes of the bound, and both answers are `unsupported`.
      */
     @JvmStatic
     internal fun utf8Length(s: String): Int {
@@ -46,6 +61,10 @@ internal object Utf {
                     n += FOUR_BYTE_LENGTH
                     i++
                 }
+
+                // An unpaired surrogate: what the encoder emits for it is one
+                // replacement byte, measured rather than assumed.
+                Character.isSurrogate(c) -> n += REPLACEMENT_LENGTH
 
                 else -> n += THREE_BYTE_LENGTH
             }

@@ -12,6 +12,13 @@ plugins {
 
 val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
+/** The business version of the ruleset this build compiles in, from rules.lock. */
+val rulesVersion: String = rootProject.layout.projectDirectory.file("rules.lock").asFile
+    .readLines()
+    .first { it.trimStart().startsWith("rules_version") }
+    .substringAfter('"')
+    .substringBefore('"')
+
 // The toolchain is locked so that a build produces the same bytecode everywhere.
 kotlin {
     jvmToolchain(BuildConstants.TOOLCHAIN_JDK)
@@ -48,6 +55,9 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.layout.projectDirectory.file("README.md")).withPropertyName("readme")
     systemProperty("businessid.spec.dir", specDir.asFile.absolutePath)
     systemProperty("businessid.project.version", project.version.toString())
+    // Read from rules.lock rather than repeated in each test: a resync moves it,
+    // and a literal in six files is six ways to forget one.
+    systemProperty("businessid.rules.version", rulesVersion)
     // TestHygieneTest walks these classes to prove no test method is silently
     // dropped by JUnit for returning a value.
     systemProperty(

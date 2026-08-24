@@ -180,7 +180,7 @@ class EngineApiTest {
     @Test
     fun `rulesInfo reports what the engine was built from`() {
         val info = engine.rulesInfo()
-        assertEquals("2026.08.26", info.rulesVersion)
+        assertEquals(System.getProperty("businessid.rules.version"), info.rulesVersion)
         assertEquals(1, info.formatVersion)
         assertEquals(64, info.sourceDigest.length, "a SHA-256 in lowercase hexadecimal")
         assertTrue(info.sourceDigest.all { it in '0'..'9' || it in 'a'..'f' })

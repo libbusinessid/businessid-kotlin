@@ -9,90 +9,11 @@ and the whole corpus passes under it.
 
 ## Open
 
-### 1. `engine.md` section 9.1 contradicts itself, and `ir.md`, on an out of bounds access in a checksum
-
-**Measured.** The tension is inside the section, between its two sentences.
-`engine.md` section 9.1 opens with *« Une vue hors limites produit une valeur
-absente, jamais une exception »* and closes with *« un accès hors limites dans un
-checksum après format valide indique un bundle invalide et doit produire une
-erreur moteur »*. The first says absent, the second says engine error, of the
-same access.
-
-`ir.md` sides with the first, in three places: section 1.1, *"Absence is never an
-error and never an exception"*; section 1.2, an index outside a remainder table
-*"makes the enclosing checksum node evaluate to `unsupported`"*; and the
-descriptions of `COMPARE_DIGIT`, `COMPARE_SLICE` and `SLICE`, each of which is
-*"indeterminate when … `index` is out of range"*.
-
-The two readings are observable and differ on real input. Under `engine.md` a
-value whose format holds but whose checksum slice runs past the end raises an
-engine error; under `ir.md` it answers `unsupported`/`unsupported_checksum`.
-
-**What this engine does.** It follows `ir.md`. Three reasons, in order: `ir.md`
-is designated by `engine.md` section 1.1 as the exhaustive specification of every
-opcode, so it is the more specific document; an engine error would turn a value
-the rules simply cannot speak about into a failure, against priority 1 of section
-2; and `engine.md`'s own sentence reads as a diagnosis of what such an access
-*indicates* rather than as a rule about what to answer.
-
-The guard is still there and still typed: `guardEngineErrors` turns an
-`ArithmeticException` or an `IndexOutOfBoundsException` escaping a program into a
-`BusinessIdEngineException`. It never fires, because the load checks prove no
-emitted arithmetic can overflow and every view constructor answers absence rather
-than throwing.
-
-**Proposed.** Drop the second sentence of `engine.md` section 9.1, or reduce it
-to what it seems to mean: such an access *suggests* a ruleset whose format rule
-does not establish the bounds its checksum assumes, which is worth saying, and
-is not an instruction about what to answer. An engine error stays reserved for an
-invariant the load checks were supposed to have made impossible.
-
-### 2. The UTF-8 length of ill formed text is unspecified, and the order of the two bounds makes it observable
-
-**Measured.** `ir.md` section 6 orders the input bound before the encoding check:
-step 1 refuses an input above 1024 UTF-8 bytes, and step 1 of section 5 refuses
-text that is not valid UTF-8. An unpaired surrogate has no UTF-8 encoding, so for
-a Kotlin `String` that is both ill formed and near the bound, "its length in
-UTF-8 bytes" has no defined value, and the two checks answer differently
-depending on the count chosen.
-
-This engine counts an unpaired surrogate as three bytes, which is what its code
-unit would take and the only count that does not depend on a replacement policy.
-The alternative was measured rather than assumed: `String.getBytes(UTF_8)` on a
-lone high surrogate returns a single byte, `0x3F`, having substituted a question
-mark. That reading moves the boundary by two bytes per surrogate.
-
-**What this engine does.** Three bytes, documented at `Utf.utf8Length`. The
-difference is reachable only by input that is both ill formed and within a few
-bytes of 1024, and no conformance case can carry either, since a proto3 `string`
-is valid UTF-8 by definition.
-
-**Proposed.** One sentence in `ir.md` section 6: the byte length of ill formed
-text is counted as if each unpaired code unit encoded to its own length, or the
-encoding check moves ahead of the bound. Either settles it.
-
-### 3. Whether a `WHEN` checksum branch nothing reads is refused
-
-**Measured.** `ir.md` says `CHECKSUM_OP_KIND_WHEN` *"is accepted only as a direct
-operand of `CHOOSE`"*. A `WHEN` node that no node reads at all — dead, reachable
-from no root — is not an operand of `CHOOSE`, so the sentence read literally
-refuses it. But section 2 explicitly allows dead nodes: *"a node no root reaches
-costs nothing: a generator does not emit dead code"*, and check 14 counts only
-reachable ones.
-
-**What this engine does.** It refuses a `WHEN` that is a program root or that any
-non-`CHOOSE` node reads, and accepts one nothing reads. The corpus fixture
-`loader-stray-when-branch-022` makes it the root, which this refuses at check 16
-as its name requires.
-
-The choice is the narrower refusal, per priority 1: refusing a ruleset for a node
-nothing evaluates would be refusing something no engine can observe.
-
-**Proposed.** Add to check 16 whether the restriction is stated over reachable
-nodes or over every node. Both readings agree on every ruleset an author would
-write, which is exactly why it will be decided by accident otherwise.
+Nothing. The three questions this engine raised against rules `2026.08.26` were
+all settled in `2026.08.31`; they are below, with what changed.
 
 ## Not a specification question, recorded because it shapes the build
+
 
 ### Detekt and ktlint cannot run on a JDK newer than the release they were built against
 
@@ -107,7 +28,85 @@ the JDK the project pins. The compiler and the tests still run across the whole
 supported range, so nothing about the code goes unchecked on a newer JDK — only
 the analysis of it is pinned. `CONTRIBUTING.md` says the same for a local run.
 
+### Android lint fails a build that has not changed, and passes one that should fail
+
+**Measured.** CI failed the Android consumer on a commit that touched nothing
+in it: Google released AGP 9.3.2 and lint's `AndroidGradlePluginVersion`
+detector turned a correct pin into an error. The same commit passed locally,
+because the nested build directory was warm and `lintDebug` was up to date.
+The detector's verdict depends on a network index of released versions that it
+never declares as a task input, so its up-to-date check cannot be sound: a warm
+directory replays a pass that a cold one would refuse.
+
+**What this engine does.** The pin moves with the release rather than the check
+being disabled, since a consumer project exists to prove the artefact builds
+under the toolchain people actually have. Both consumer projects are standalone
+builds absent from the root settings file, which is why dependabot at `/` never
+saw them; they are named explicitly now, so the next release arrives as a pull
+request instead of as a red build on an unrelated change. The lint tasks are
+marked always out of date, so a local run means what it says — verified by
+re-pinning to 9.3.0 against a warm directory and watching it fail, which it
+would previously have skipped.
+
 ## Settled upstream
+
+### 1. `engine.md` section 9.1 contradicted itself on an out of bounds access — clause removed
+
+**Raised here, and it was the observable kind.** The section said an out of
+bounds view is an absent value and never an exception, then said an out of bounds
+access in a checksum after a valid format must produce an engine error. Two
+engines could answer differently on real input, and no conformance case would
+have caught it because no rule in the published ruleset reaches out of bounds.
+
+`engine.md` section 9.1 now points at `ir.md` section 1.1 and the clause is gone.
+The intuition behind it survives as what it was — a format rule is expected to
+establish the bounds its checksum assumes — stated as a property of a ruleset
+rather than as a runtime behaviour, because nothing proves it at load time.
+
+This engine followed `ir.md`, which the specification records as the correct
+reading. Nothing changed here.
+
+### 2. The UTF-8 length of ill formed text — the freedom is now stated and bounded
+
+**Raised here, with the measurement.** The input bound is counted in UTF-8 bytes
+and is checked before the encoding, and ill formed text has no UTF-8 encoding, so
+the count had to be invented. This engine measured both answers rather than
+assuming one: `String.getBytes(UTF_8)` on a lone high surrogate returns a single
+byte, `0x3F`; the encoding that surrogate would have had is three.
+
+`ir.md` section 6 step 1 now states the freedom and bounds it the way check 14
+before check 15 is bounded: an engine chooses, **MUST state which**, both answers
+are `unsupported`, and no conformance case can carry such an input.
+
+**What this engine chose, and where it says so.** It counts what its own encoder
+produces — one byte per unpaired surrogate. This engine previously counted three,
+and changed: counting what the encoder produces turns the rule from a convention
+into an invariant, `Utf.utf8Length(s) == s.toByteArray(UTF_8).size` for every
+string, which `UtfTest` states as a property over generated input rather than
+over chosen examples. The choice is stated in the KDoc of `Utf.utf8Length` and in
+a section of its own in `README.md`, not only in a test.
+
+### 3. A `WHEN` no `CHOOSE` reads — the reference loader accepted it, and now refuses it
+
+**Raised here, and this one went the other way.** This engine refused a `WHEN`
+that nothing reads; the reference loader accepted it. Check 16 takes `WHEN` only
+as a direct operand of a `CHOOSE`, and that loader enforced it by looking at each
+node's parents — a node with no parent has none to look at, and section 2 permits
+unreachable nodes, so nothing else caught it.
+
+The reference loader is fixed, with the program root excluded from the scan
+because `root_node` is a reference rather than an operand and a program rooted in
+a `WHEN` keeps its own rule and its own message.
+
+**This engine matches that exclusion.** The root case is answered earlier, by the
+rule that owns it, with the message `checksum program N roots at a when branch`;
+a branch nothing reads is answered by the new rule, with `program N node M is a
+when branch no choose reads`. Both are check 16, and
+`LoaderRefusalTest` asserts each message separately so the two rules cannot
+collapse into one.
+
+## Settled upstream, earlier
+
 
 ### `loader-call-cycle-014` and `loader-unknown-call-target-015` are invalid twice over — and the order saves them
 
@@ -126,10 +125,11 @@ thirty-five fixtures, so a reordering would be caught here.
 
 ### The five fixtures that were invalid for more than one reason
 
-Nothing found. All thirty-five `load_ruleset` fixtures of rules `2026.08.26` were
-decoded byte for byte, and each is refused at exactly the check its name targets,
-with the error kind the corpus expects. The two above are the only ones with a
-second fault, and the order of the checks resolves them.
+Nothing found, in either round. All thirty-five `load_ruleset` fixtures were
+decoded byte for byte at rules `2026.08.26` and again at `2026.08.31`, and each
+is refused at exactly the check its name targets, with the error kind the corpus
+expects. The two above are the only ones with a second fault, and the order of
+the checks resolves them.
 
 ### `dispatch-unsupported-country-006` does not test an unsupported country
 
@@ -145,8 +145,9 @@ on it, and this engine passes it as written.
 
 ### The expansion count of the published ruleset
 
-`ir.md` section 2 states both figures, and this engine measures both:
-**3069** operation instances under the reachable-root reading, and **3204** under
-the reading that sums every capture — the figure the document says two engines
-reported. `PublishedRulesetTest` asserts both, so the correct reading cannot
-regress into the other without a test saying so.
+`ir.md` section 2 states both figures, and this engine measures both. At rules
+`2026.08.26`: **3069** operation instances under the reachable-root reading and
+**3204** under the reading that sums every capture — the figure the document says
+two engines reported. At `2026.08.31`, after the three membership rules were
+added: **3094** and **3229**. `PublishedRulesetTest` asserts both, so the correct
+reading cannot regress into the other without a test saying so.

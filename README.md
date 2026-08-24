@@ -10,9 +10,9 @@ code, the primitives it calls, and a hand-written API — no ruleset, no Protobu
 no decoder.
 
 ```text
-rules 2026.08.26, format version 1
-94 identifier definitions · 37 kinds · 250 programs · 2376 IR nodes
-conformance: 666 of 666 cases matched, 0 differed
+rules 2026.08.31, format version 1
+94 identifier definitions · 37 kinds · 250 programs · 2386 IR nodes
+conformance: 673 of 673 cases matched, 0 differed
 ```
 
 ## What it validates, and what it does not
@@ -33,6 +33,25 @@ Three statuses are not verdicts and must not be read as one:
   knowledge never becomes invalidity.
 - `not_run` — an earlier step made this one pointless.
 - `invalid` — a documented, applicable rule proved the value wrong.
+
+## Ill formed text
+
+The input is bounded at 1024 UTF-8 bytes before anything looks at it, and text
+that is not well formed is refused as `invalid_encoding`. The bound is measured
+first, and ill formed text has no UTF-8 encoding, so the count has to come from
+somewhere. `ir.md` section 6 step 1 leaves an engine two answers and requires it
+to state which it gives.
+
+**This engine counts what its own encoder produces.** A Kotlin `String` holding
+one unpaired surrogate — the only ill formed text the type admits — encodes to a
+single replacement byte, so it counts as one. `Utf.utf8Length` therefore agrees
+with `String.toByteArray(UTF_8).size` on every string, well formed or not, which
+is stated as a property over generated input rather than left as a convention.
+The array is never allocated; only its length is computed.
+
+The other answer the specification allows is to refuse ill formed text before
+measuring it. The difference is reachable only by text that is both ill formed
+and within a few bytes of the bound, and both answers are `unsupported`.
 
 ## Install
 
@@ -179,6 +198,26 @@ language version, API version and core libraries alike.
 **Kotlin Multiplatform is not announced.** This release targets the JVM and
 Android, and nothing else has been run against the conformance corpus.
 
+## Membership lists
+
+Three rules check an identifier against a list a register publishes: 2 566
+German court codes, 148 French greffe codes, and the Luxembourg section letter.
+Those lists are emitted as sorted string constants read by binary search, not as
+arrays walked from the front. A string literal lives in the class constant pool:
+no initialiser bytecode, no allocation before the first call, and a lookup that
+does not grow with the list.
+
+That form was not a preference. Emitted one array literal per entry, 2 714
+entries overflow the sixty-four kilobyte limit the JVM places on a class
+initialiser and the library stops compiling. Any array literal this generator
+emits is now split across methods once it passes five hundred elements, whatever
+a future ruleset carries.
+
+The German list is split by length, and the emitted search reads one group per
+length. 782 of the 818 six-character codes begin with a five-character one, so
+over a single list *starting with* a code would not mean *being* one, and
+`DEB1000X` would have passed on the strength of `B1000`.
+
 ## A custom ruleset
 
 There is no factory taking a ruleset as bytes. Such an API would put the
@@ -231,7 +270,7 @@ GOTOOLCHAIN=auto go run \
 ```
 
 ```text
-rules 2026.08.26: 666 cases, 666 matched, 0 differed
+rules 2026.08.31: 673 cases, 673 matched, 0 differed
 conformant
 ```
 
@@ -243,7 +282,7 @@ conformant
 ./gradlew generateEngine   # re-emit the rules from the ruleset
 ./gradlew checkGenerated   # fail when the committed sources are stale
 ./gradlew fuzz             # Jazzer, beyond the regression corpus
-./gradlew :benchmarks:jmh  # the five measurements engine.md section 14 asks for
+./gradlew :benchmarks:jmh  # the five measurements section 14 asks for, and more
 ```
 
 Coverage is split the way `engine.md` section 12.2 splits it. The thresholds —
@@ -253,8 +292,8 @@ the conformance corpus, not the engine, and a threshold there would fail an
 irreproachable engine on a gap in the corpus.
 
 ```text
-hand written   lines  99.01%   branches  92.91%
-emitted        lines  88.58%   branches  68.61%
+hand written   lines  99.04%   branches  93.04%
+emitted        lines  88.58%   branches  68.74%
 ```
 
 The figures come from the test suite alone: the fuzz task is excluded from
@@ -269,7 +308,7 @@ run, and on which inputs it happened to generate, would not be a measurement.
 
 Pitest is aimed at the runtime primitives and the pipeline, where an off-by-one
 in a comparison or a flipped bound is a wrong verdict rather than a compile
-error. It scores **90.4 %** — 807 of 893 mutants killed, against the 80 % that
+error. It scores **90.5 %** — 856 of 946 mutants killed, against the 80 % that
 `engine.md` section 12.5 recommends. The emitted rules are left out: mutating a
 table produced from the ruleset measures the corpus again.
 
@@ -280,12 +319,11 @@ fallback converged on it; the comparisons are now `== NO_TARGET`. And neither
 bound of the six code points a dispatch trim removes was exercised anywhere,
 which `TokensTest` now pins on both sides.
 
-The eighty-six survivors fall into three families, each equivalent by
-construction: the fast-path early returns of `CanonBuffer` and `Tokens`, whose
-removal leaves the value identical and only the work larger; the null-check
-intrinsics Kotlin inserts, which are not this project's code; and the hash
-multiplier and a `StringBuilder` capacity, neither of which any contract
-observes.
+The ninety survivors fall into three families, each equivalent by construction:
+the fast-path early returns of `CanonBuffer` and `Tokens`, whose removal leaves
+the value identical and only the work larger; the null-check intrinsics Kotlin
+inserts, which are not this project's code; and the hash multiplier and a
+`StringBuilder` capacity, neither of which any contract observes.
 
 ## Threads, I/O and the network
 

@@ -26,6 +26,6 @@ class ValidationTest {
 
     @Test
     fun readsTheRulesVersion() {
-        assertEquals("2026.08.26", Validation.rulesVersion())
+        assertEquals(System.getProperty("businessid.rules.version"), Validation.rulesVersion())
     }
 }

@@ -38,6 +38,22 @@ internal class Emitter(private val bundle: LoadedBundle) {
         /** Below this, a code point has no printable spelling in a Kotlin literal. */
         const val FIRST_PRINTABLE = 0x20
         const val DELETE = 0x7F
+
+        /**
+         * How many elements one array literal may hold before it is split.
+         *
+         * Conservative: the heaviest element this emitter produces is a nested
+         * `intArrayOf` of a few values, at roughly fifty bytes of bytecode, so
+         * five hundred of them sit near ten per cent of the sixty-four kilobyte
+         * method limit.
+         */
+        const val MAX_ELEMENTS_PER_METHOD = 500
+
+        /**
+         * Above this many entries, a prefix list is packed into a string
+         * constant and looked up by binary search rather than walked.
+         */
+        const val MIN_PACKED_PREFIXES = 16
     }
 
     private val constants = LinkedHashMap<String, String>()
@@ -85,10 +101,34 @@ internal class Emitter(private val bundle: LoadedBundle) {
         return name
     }
 
+    /**
+     * Emits an array literal, split across helper functions when it is long.
+     *
+     * Every element of an array literal costs bytecode in the enclosing method,
+     * and a file level `val` is initialised in the class initialiser, which the
+     * JVM caps at sixty-four kilobytes. One long enough table stops the library
+     * compiling — a ruleset that grew by two thousand entries is what found it.
+     * Splitting the literal keeps each method far below the cap whatever a
+     * future ruleset carries.
+     */
+    private fun arrayLiteral(name: String, type: String, factory: String, elements: List<String>): String {
+        if (elements.size <= MAX_ELEMENTS_PER_METHOD) {
+            return "internal val $name: $type = $factory(${elements.joinToString(", ")})"
+        }
+        val chunks = elements.chunked(MAX_ELEMENTS_PER_METHOD)
+        return buildString {
+            chunks.forEachIndexed { index, chunk ->
+                appendLine("private fun ${name.lowercase()}p$index(): $type = $factory(${chunk.joinToString(", ")})")
+            }
+            val parts = chunks.indices.joinToString(" + ") { "${name.lowercase()}p$it()" }
+            append("internal val $name: $type = $parts")
+        }
+    }
+
     private fun codePoints(text: String): String {
         val cp = Cp.of(text)
         return pool("cp:$text") { name ->
-            "internal val $name: IntArray = intArrayOf(${cp.joinToString(", ")})"
+            arrayLiteral(name, "IntArray", "intArrayOf", cp.map { it.toString() })
         }
     }
 
@@ -102,7 +142,7 @@ internal class Emitter(private val bundle: LoadedBundle) {
     private fun sortedSet(text: String): String {
         val cp = Cp.of(text).toSortedSet().toIntArray()
         return pool("set:" + cp.joinToString(",")) { name ->
-            "internal val $name: IntArray = intArrayOf(${cp.joinToString(", ")})"
+            arrayLiteral(name, "IntArray", "intArrayOf", cp.map { it.toString() })
         }
     }
 
@@ -115,8 +155,28 @@ internal class Emitter(private val bundle: LoadedBundle) {
     }
 
     private fun prefixList(values: List<String>): String = pool("prefixes:" + values.joinToString(" ")) { name ->
-        val rows = values.joinToString(", ") { "intArrayOf(${Cp.of(it).joinToString(", ")})" }
-        "internal val $name: Array<IntArray> = arrayOf($rows)"
+        arrayLiteral(
+            name,
+            "Array<IntArray>",
+            "arrayOf",
+            values.map { "intArrayOf(${Cp.of(it).joinToString(", ")})" },
+        )
+    }
+
+    /** Orders two strings by their code points, not by their UTF-16 units. */
+    private fun compareByCodePoint(left: String, right: String): Int {
+        val a = Cp.of(left)
+        val b = Cp.of(right)
+        for (i in 0 until minOf(a.size, b.size)) {
+            val order = a[i] - b[i]
+            if (order != 0) return order
+        }
+        return a.size - b.size
+    }
+
+    /** One group of equally shaped prefixes, packed end to end and sorted. */
+    private fun packedPrefixes(values: List<String>): String = pool("packed:" + values.joinToString(" ")) { name ->
+        "internal const val $name: String = ${quote(values.joinToString(""))}"
     }
 
     /**
@@ -235,8 +295,7 @@ internal class Emitter(private val bundle: LoadedBundle) {
             Rules.PredicateOpKind.PREDICATE_OP_KIND_ENDS_WITH ->
                 "Pred.endsWith(${str(0)}, ${codePoints(op.text)})"
 
-            Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN ->
-                "Pred.prefixIn(${str(0)}, ${prefixList(op.valuesList)})"
+            Rules.PredicateOpKind.PREDICATE_OP_KIND_PREFIX_IN -> prefixIn(str(0), op.valuesList)
 
             Rules.PredicateOpKind.PREDICATE_OP_KIND_CHAR_AT_IN ->
                 "Pred.charAtIn(${str(0)}, ${op.index}, ${sortedSet(op.text)})"
@@ -259,6 +318,43 @@ internal class Emitter(private val bundle: LoadedBundle) {
 
             else -> "Pred.integerIs(${intExpr(p, node.getInputNodes(0), scope)}, ${op.constant}L)"
         }
+    }
+
+    /**
+     * `prefix_in(expr, prefixes)`.
+     *
+     * A short list is walked. A long one is grouped by shape — how many code
+     * points an entry holds, and how many UTF-16 units, which differ only for an
+     * entry reaching outside the Basic Multilingual Plane — and each group is
+     * packed into one sorted string constant that a binary search reads. The
+     * groups are combined with `||`, which keeps the short circuit the IR asks
+     * for: the first group that matches decides.
+     *
+     * The membership lists a register publishes run to thousands of entries, and
+     * emitted one array literal per entry they cost an allocation each before the
+     * first call, a linear walk on every call, and eventually a class initialiser
+     * the JVM refuses.
+     */
+    private fun prefixIn(value: String, values: List<String>): String {
+        if (values.size < MIN_PACKED_PREFIXES) {
+            return "Pred.prefixIn($value, ${prefixList(values)})"
+        }
+        val groups = values
+            .groupBy { Cp.count(it) to it.length }
+            .toSortedMap(compareBy({ it.first }, { it.second }))
+        val tests = groups.map { (shape, entries) ->
+            val (codePoints, stride) = shape
+            // Sorted by code point, which is what the search compares. Kotlin's
+            // own ordering is over UTF-16 units, and the two disagree above the
+            // Basic Multilingual Plane: a surrogate pair starts at 0xD800 where
+            // the code point it spells is above 0xFFFF, so an entry beginning
+            // with U+FFFD sorts before a supplementary one by code point and
+            // after it by code unit. Packed in that order the binary search
+            // would walk past a member and answer that it is not one.
+            val packed = packedPrefixes(entries.sortedWith(::compareByCodePoint))
+            "Pred.prefixInPacked($value, $packed, $codePoints, $stride)"
+        }
+        return tests.joinToString(" || ", "(", ")")
     }
 
     private fun intExpr(p: Rules.Program, index: Int, scope: Scope): String {

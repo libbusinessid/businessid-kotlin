@@ -1,4 +1,4 @@
-// Generated from businessid-rules.binpb 2026.08.26. Do not edit by hand:
+// Generated from businessid-rules.binpb 2026.08.31. Do not edit by hand:
 // run `./gradlew generateEngine`. `./gradlew checkGenerated` fails when this
 // file and the pinned bundle disagree.
 //
@@ -22,97 +22,97 @@ import io.libbusinessid.runtime.Pred
 /** The country of a dispatch target, absent for a GLOBAL target. */
 internal fun targetCountryView(target: Int): CpView? =
     when (target) {
-        0 -> K93
-        1 -> K94
-        2 -> K95
-        3 -> K96
-        4 -> K97
-        5 -> K98
-        6 -> K99
-        7 -> K100
-        9 -> K101
-        10 -> K102
-        11 -> K103
-        13 -> K104
-        14 -> K103
-        15 -> K101
-        16 -> K105
-        17 -> K106
-        18 -> K107
-        19 -> K100
-        20 -> K108
-        21 -> K109
-        22 -> K110
-        23 -> K111
-        24 -> K112
-        25 -> K113
-        26 -> K93
-        27 -> K98
-        28 -> K95
-        29 -> K114
-        30 -> K115
-        31 -> K116
-        32 -> K117
-        33 -> K118
-        34 -> K119
-        35 -> K120
-        36 -> K99
-        37 -> K121
-        38 -> K122
-        39 -> K123
-        40 -> K104
-        41 -> K109
-        42 -> K107
-        43 -> K105
-        44 -> K106
-        45 -> K123
-        46 -> K114
-        47 -> K119
-        48 -> K118
-        50 -> K122
-        51 -> K117
-        52 -> K113
-        53 -> K110
-        54 -> K120
-        55 -> K121
-        56 -> K115
-        57 -> K116
-        58 -> K108
-        59 -> K112
-        60 -> K112
-        61 -> K124
-        62 -> K104
-        63 -> K103
-        64 -> K101
-        65 -> K105
-        66 -> K106
-        67 -> K107
-        68 -> K100
-        69 -> K108
-        70 -> K110
-        71 -> K111
-        72 -> K112
-        73 -> K96
-        74 -> K125
-        75 -> K113
-        76 -> K93
-        77 -> K98
-        78 -> K126
-        79 -> K95
-        80 -> K127
-        81 -> K115
-        82 -> K116
-        83 -> K117
-        84 -> K118
-        85 -> K128
-        86 -> K119
-        87 -> K120
-        88 -> K99
-        89 -> K121
-        90 -> K122
-        91 -> K123
-        92 -> K129
-        93 -> K111
+        0 -> K95
+        1 -> K96
+        2 -> K97
+        3 -> K98
+        4 -> K99
+        5 -> K100
+        6 -> K101
+        7 -> K102
+        9 -> K103
+        10 -> K104
+        11 -> K105
+        13 -> K106
+        14 -> K105
+        15 -> K103
+        16 -> K107
+        17 -> K108
+        18 -> K109
+        19 -> K102
+        20 -> K110
+        21 -> K111
+        22 -> K112
+        23 -> K113
+        24 -> K114
+        25 -> K115
+        26 -> K95
+        27 -> K100
+        28 -> K97
+        29 -> K116
+        30 -> K117
+        31 -> K118
+        32 -> K119
+        33 -> K120
+        34 -> K121
+        35 -> K122
+        36 -> K101
+        37 -> K123
+        38 -> K124
+        39 -> K125
+        40 -> K106
+        41 -> K111
+        42 -> K109
+        43 -> K107
+        44 -> K108
+        45 -> K125
+        46 -> K116
+        47 -> K121
+        48 -> K120
+        50 -> K124
+        51 -> K119
+        52 -> K115
+        53 -> K112
+        54 -> K122
+        55 -> K123
+        56 -> K117
+        57 -> K118
+        58 -> K110
+        59 -> K114
+        60 -> K114
+        61 -> K126
+        62 -> K106
+        63 -> K105
+        64 -> K103
+        65 -> K107
+        66 -> K108
+        67 -> K109
+        68 -> K102
+        69 -> K110
+        70 -> K112
+        71 -> K113
+        72 -> K114
+        73 -> K98
+        74 -> K127
+        75 -> K115
+        76 -> K95
+        77 -> K100
+        78 -> K128
+        79 -> K97
+        80 -> K129
+        81 -> K117
+        82 -> K118
+        83 -> K119
+        84 -> K120
+        85 -> K130
+        86 -> K121
+        87 -> K122
+        88 -> K101
+        89 -> K123
+        90 -> K124
+        91 -> K125
+        92 -> K131
+        93 -> K113
         else -> null
     }
 
@@ -124,16 +124,16 @@ internal fun targetCountryView(target: Int): CpView? =
  */
 internal fun prependCountryIfMissing(target: Int, b: CanonBuffer) {
     when (target) {
-        0 -> if (true) b.prepend(K27)
-        1 -> if (true) b.prepend(K130)
-        2 -> if (true) b.prepend(K29)
-        3 -> if (true) b.prepend(K50)
-        4 -> if (true) b.prepend(K131)
-        5 -> if (true) b.prepend(K28)
-        6 -> if (true) b.prepend(K37)
-        7 -> if (true) b.prepend(K21)
+        0 -> if (true) b.prepend(K30)
+        1 -> if (true) b.prepend(K132)
+        2 -> if (true) b.prepend(K32)
+        3 -> if (true) b.prepend(K52)
+        4 -> if (true) b.prepend(K133)
+        5 -> if (true) b.prepend(K31)
+        6 -> if (true) b.prepend(K40)
+        7 -> if (true) b.prepend(K23)
         9 -> if (true) b.prepend(K17)
-        10 -> if (true) b.prepend(K132)
+        10 -> if (true) b.prepend(K134)
         11 -> if (true) b.prepend(K16)
         13 -> if (!(b.startsWith(K14))) b.prepend(K14)
         14 -> if (!(b.startsWith(K16))) b.prepend(K16)
@@ -141,89 +141,89 @@ internal fun prependCountryIfMissing(target: Int, b: CanonBuffer) {
         16 -> if (!(b.startsWith(K18))) b.prepend(K18)
         17 -> if (!(b.startsWith(K19))) b.prepend(K19)
         18 -> if (!(b.startsWith(K20))) b.prepend(K20)
-        19 -> if (!(b.startsWith(K21))) b.prepend(K21)
-        20 -> if (!(b.startsWith(K22))) b.prepend(K22)
+        19 -> if (!(b.startsWith(K23))) b.prepend(K23)
+        20 -> if (!(b.startsWith(K24))) b.prepend(K24)
         21 -> if (!(b.startsWith(K9))) b.prepend(K9)
-        22 -> if (!(b.startsWith(K23))) b.prepend(K23)
-        23 -> if (!(b.startsWith(K24))) b.prepend(K24)
-        24 -> if (!(b.startsWith(K25))) b.prepend(K25)
-        25 -> if (!(b.startsWith(K26))) b.prepend(K26)
-        26 -> if (!(b.startsWith(K27))) b.prepend(K27)
-        27 -> if (!(b.startsWith(K28))) b.prepend(K28)
-        28 -> if (!(b.startsWith(K29))) b.prepend(K29)
-        29 -> if (!(b.startsWith(K30))) b.prepend(K30)
-        30 -> if (!(b.startsWith(K31))) b.prepend(K31)
-        31 -> if (!(b.startsWith(K32))) b.prepend(K32)
-        32 -> if (!(b.startsWith(K33))) b.prepend(K33)
-        33 -> if (!(b.startsWith(K34))) b.prepend(K34)
-        34 -> if (!(b.startsWith(K35))) b.prepend(K35)
-        35 -> if (!(b.startsWith(K36))) b.prepend(K36)
-        36 -> if (!(b.startsWith(K37))) b.prepend(K37)
-        37 -> if (!(b.startsWith(K38))) b.prepend(K38)
-        38 -> if (!(b.startsWith(K39))) b.prepend(K39)
-        39 -> if (!(b.startsWith(K40))) b.prepend(K40)
+        22 -> if (!(b.startsWith(K25))) b.prepend(K25)
+        23 -> if (!(b.startsWith(K26))) b.prepend(K26)
+        24 -> if (!(b.startsWith(K27))) b.prepend(K27)
+        25 -> if (!(b.startsWith(K29))) b.prepend(K29)
+        26 -> if (!(b.startsWith(K30))) b.prepend(K30)
+        27 -> if (!(b.startsWith(K31))) b.prepend(K31)
+        28 -> if (!(b.startsWith(K32))) b.prepend(K32)
+        29 -> if (!(b.startsWith(K33))) b.prepend(K33)
+        30 -> if (!(b.startsWith(K34))) b.prepend(K34)
+        31 -> if (!(b.startsWith(K35))) b.prepend(K35)
+        32 -> if (!(b.startsWith(K36))) b.prepend(K36)
+        33 -> if (!(b.startsWith(K37))) b.prepend(K37)
+        34 -> if (!(b.startsWith(K38))) b.prepend(K38)
+        35 -> if (!(b.startsWith(K39))) b.prepend(K39)
+        36 -> if (!(b.startsWith(K40))) b.prepend(K40)
+        37 -> if (!(b.startsWith(K41))) b.prepend(K41)
+        38 -> if (!(b.startsWith(K42))) b.prepend(K42)
+        39 -> if (!(b.startsWith(K43))) b.prepend(K43)
         40 -> if (true) b.prepend(K14)
         41 -> if (true) b.prepend(K9)
         42 -> if (true) b.prepend(K20)
         43 -> if (true) b.prepend(K18)
         44 -> if (true) b.prepend(K19)
-        45 -> if (true) b.prepend(K40)
-        46 -> if (true) b.prepend(K30)
-        47 -> if (true) b.prepend(K35)
-        48 -> if (true) b.prepend(K34)
-        50 -> if (true) b.prepend(K39)
-        51 -> if (true) b.prepend(K33)
-        52 -> if (true) b.prepend(K26)
-        53 -> if (true) b.prepend(K23)
-        54 -> if (true) b.prepend(K36)
-        55 -> if (true) b.prepend(K38)
-        56 -> if (true) b.prepend(K31)
-        57 -> if (true) b.prepend(K32)
-        58 -> if (true) b.prepend(K22)
-        59 -> if (true) b.prepend(K25)
-        60 -> if (true) b.prepend(K25)
-        61 -> if (true) b.prepend(K133)
+        45 -> if (true) b.prepend(K43)
+        46 -> if (true) b.prepend(K33)
+        47 -> if (true) b.prepend(K38)
+        48 -> if (true) b.prepend(K37)
+        50 -> if (true) b.prepend(K42)
+        51 -> if (true) b.prepend(K36)
+        52 -> if (true) b.prepend(K29)
+        53 -> if (true) b.prepend(K25)
+        54 -> if (true) b.prepend(K39)
+        55 -> if (true) b.prepend(K41)
+        56 -> if (true) b.prepend(K34)
+        57 -> if (true) b.prepend(K35)
+        58 -> if (true) b.prepend(K24)
+        59 -> if (true) b.prepend(K27)
+        60 -> if (true) b.prepend(K27)
+        61 -> if (true) b.prepend(K135)
         62 -> if (!(b.startsWith(K14))) b.prepend(K14)
         63 -> if (!(b.startsWith(K16))) b.prepend(K16)
         64 -> if (!(b.startsWith(K17))) b.prepend(K17)
         65 -> if (!(b.startsWith(K18))) b.prepend(K18)
         66 -> if (!(b.startsWith(K19))) b.prepend(K19)
         67 -> if (!(b.startsWith(K20))) b.prepend(K20)
-        68 -> if (!(b.startsWith(K21))) b.prepend(K21)
-        69 -> if (!(b.startsWith(K22))) b.prepend(K22)
-        70 -> if (!(b.startsWith(K23))) b.prepend(K23)
-        71 -> if (!(b.startsWith(K24))) b.prepend(K24)
-        72 -> if (!(b.startsWith(K25))) b.prepend(K25)
-        73 -> if (!(b.startsWith(K50))) b.prepend(K50)
+        68 -> if (!(b.startsWith(K23))) b.prepend(K23)
+        69 -> if (!(b.startsWith(K24))) b.prepend(K24)
+        70 -> if (!(b.startsWith(K25))) b.prepend(K25)
+        71 -> if (!(b.startsWith(K26))) b.prepend(K26)
+        72 -> if (!(b.startsWith(K27))) b.prepend(K27)
+        73 -> if (!(b.startsWith(K52))) b.prepend(K52)
         74 -> if (!(b.startsWith(K9) || b.startsWith(K8))) b.prepend(K9)
-        75 -> if (!(b.startsWith(K26))) b.prepend(K26)
-        76 -> if (!(b.startsWith(K27))) b.prepend(K27)
-        77 -> if (!(b.startsWith(K28))) b.prepend(K28)
-        78 -> if (!(b.startsWith(K51))) b.prepend(K51)
-        79 -> if (!(b.startsWith(K29))) b.prepend(K29)
-        80 -> if (!(b.startsWith(K52))) b.prepend(K52)
-        81 -> if (!(b.startsWith(K31))) b.prepend(K31)
-        82 -> if (!(b.startsWith(K32))) b.prepend(K32)
-        83 -> if (!(b.startsWith(K33))) b.prepend(K33)
-        84 -> if (!(b.startsWith(K34))) b.prepend(K34)
-        85 -> if (!(b.startsWith(K54))) b.prepend(K54)
-        86 -> if (!(b.startsWith(K35))) b.prepend(K35)
-        87 -> if (!(b.startsWith(K36))) b.prepend(K36)
-        88 -> if (!(b.startsWith(K37))) b.prepend(K37)
-        89 -> if (!(b.startsWith(K38))) b.prepend(K38)
-        90 -> if (!(b.startsWith(K39))) b.prepend(K39)
-        91 -> if (!(b.startsWith(K40))) b.prepend(K40)
-        92 -> if (!(b.startsWith(K56))) b.prepend(K56)
-        93 -> if (true) b.prepend(K24)
+        75 -> if (!(b.startsWith(K29))) b.prepend(K29)
+        76 -> if (!(b.startsWith(K30))) b.prepend(K30)
+        77 -> if (!(b.startsWith(K31))) b.prepend(K31)
+        78 -> if (!(b.startsWith(K53))) b.prepend(K53)
+        79 -> if (!(b.startsWith(K32))) b.prepend(K32)
+        80 -> if (!(b.startsWith(K54))) b.prepend(K54)
+        81 -> if (!(b.startsWith(K34))) b.prepend(K34)
+        82 -> if (!(b.startsWith(K35))) b.prepend(K35)
+        83 -> if (!(b.startsWith(K36))) b.prepend(K36)
+        84 -> if (!(b.startsWith(K37))) b.prepend(K37)
+        85 -> if (!(b.startsWith(K56))) b.prepend(K56)
+        86 -> if (!(b.startsWith(K38))) b.prepend(K38)
+        87 -> if (!(b.startsWith(K39))) b.prepend(K39)
+        88 -> if (!(b.startsWith(K40))) b.prepend(K40)
+        89 -> if (!(b.startsWith(K41))) b.prepend(K41)
+        90 -> if (!(b.startsWith(K42))) b.prepend(K42)
+        91 -> if (!(b.startsWith(K43))) b.prepend(K43)
+        92 -> if (!(b.startsWith(K58))) b.prepend(K58)
+        93 -> if (true) b.prepend(K26)
         else -> Unit
     }
 }
 
 /** The compiled ruleset: metadata and every table the pipeline reads. */
 internal object Ruleset {
-    const val RULES_VERSION: String = "2026.08.26"
+    const val RULES_VERSION: String = "2026.08.31"
     const val FORMAT_VERSION: Int = 1
-    const val SOURCE_DIGEST: String = "513edb5a39e7b2af84df34fe785e8ab7c76a62143e7ed4319b3162fe3125a2b0"
+    const val SOURCE_DIGEST: String = "68de82e8f0fa7557f232566b7ef14b504e0ab80637a0cfbc0e598295357aa998"
 
     /** Every frozen capability this engine implements. */
     val CAPABILITIES: List<Capability> = listOf(
@@ -674,27 +674,27 @@ internal object Ruleset {
                     Pred.startsWith(value, K18) -> 16
                     Pred.startsWith(value, K19) -> 17
                     Pred.startsWith(value, K20) -> 18
-                    Pred.startsWith(value, K21) -> 19
-                    Pred.startsWith(value, K22) -> 20
+                    Pred.startsWith(value, K23) -> 19
+                    Pred.startsWith(value, K24) -> 20
                     Pred.startsWith(value, K9) -> 21
-                    Pred.startsWith(value, K23) -> 22
-                    Pred.startsWith(value, K24) -> 23
-                    Pred.startsWith(value, K25) -> 24
-                    Pred.startsWith(value, K26) -> 25
-                    Pred.startsWith(value, K27) -> 26
-                    Pred.startsWith(value, K28) -> 27
-                    Pred.startsWith(value, K29) -> 28
-                    Pred.startsWith(value, K30) -> 29
-                    Pred.startsWith(value, K31) -> 30
-                    Pred.startsWith(value, K32) -> 31
-                    Pred.startsWith(value, K33) -> 32
-                    Pred.startsWith(value, K34) -> 33
-                    Pred.startsWith(value, K35) -> 34
-                    Pred.startsWith(value, K36) -> 35
-                    Pred.startsWith(value, K37) -> 36
-                    Pred.startsWith(value, K38) -> 37
-                    Pred.startsWith(value, K39) -> 38
-                    Pred.startsWith(value, K40) -> 39
+                    Pred.startsWith(value, K25) -> 22
+                    Pred.startsWith(value, K26) -> 23
+                    Pred.startsWith(value, K27) -> 24
+                    Pred.startsWith(value, K29) -> 25
+                    Pred.startsWith(value, K30) -> 26
+                    Pred.startsWith(value, K31) -> 27
+                    Pred.startsWith(value, K32) -> 28
+                    Pred.startsWith(value, K33) -> 29
+                    Pred.startsWith(value, K34) -> 30
+                    Pred.startsWith(value, K35) -> 31
+                    Pred.startsWith(value, K36) -> 32
+                    Pred.startsWith(value, K37) -> 33
+                    Pred.startsWith(value, K38) -> 34
+                    Pred.startsWith(value, K39) -> 35
+                    Pred.startsWith(value, K40) -> 36
+                    Pred.startsWith(value, K41) -> 37
+                    Pred.startsWith(value, K42) -> 38
+                    Pred.startsWith(value, K43) -> 39
                     else -> -1
                 }
             35 ->
@@ -705,32 +705,32 @@ internal object Ruleset {
                     Pred.startsWith(value, K18) -> 65
                     Pred.startsWith(value, K19) -> 66
                     Pred.startsWith(value, K20) -> 67
-                    Pred.startsWith(value, K21) -> 68
-                    Pred.startsWith(value, K22) -> 69
+                    Pred.startsWith(value, K23) -> 68
+                    Pred.startsWith(value, K24) -> 69
                     Pred.startsWith(value, K9) -> 74
-                    Pred.startsWith(value, K23) -> 70
-                    Pred.startsWith(value, K24) -> 71
-                    Pred.startsWith(value, K25) -> 72
-                    Pred.startsWith(value, K50) -> 73
+                    Pred.startsWith(value, K25) -> 70
+                    Pred.startsWith(value, K26) -> 71
+                    Pred.startsWith(value, K27) -> 72
+                    Pred.startsWith(value, K52) -> 73
                     Pred.startsWith(value, K8) -> 74
-                    Pred.startsWith(value, K26) -> 75
-                    Pred.startsWith(value, K27) -> 76
-                    Pred.startsWith(value, K28) -> 77
-                    Pred.startsWith(value, K51) -> 78
-                    Pred.startsWith(value, K29) -> 79
-                    Pred.startsWith(value, K52) -> 80
-                    Pred.startsWith(value, K31) -> 81
-                    Pred.startsWith(value, K32) -> 82
-                    Pred.startsWith(value, K33) -> 83
-                    Pred.startsWith(value, K34) -> 84
-                    Pred.startsWith(value, K54) -> 85
-                    Pred.startsWith(value, K35) -> 86
-                    Pred.startsWith(value, K36) -> 87
-                    Pred.startsWith(value, K37) -> 88
-                    Pred.startsWith(value, K38) -> 89
-                    Pred.startsWith(value, K39) -> 90
-                    Pred.startsWith(value, K40) -> 91
-                    Pred.startsWith(value, K56) -> 92
+                    Pred.startsWith(value, K29) -> 75
+                    Pred.startsWith(value, K30) -> 76
+                    Pred.startsWith(value, K31) -> 77
+                    Pred.startsWith(value, K53) -> 78
+                    Pred.startsWith(value, K32) -> 79
+                    Pred.startsWith(value, K54) -> 80
+                    Pred.startsWith(value, K34) -> 81
+                    Pred.startsWith(value, K35) -> 82
+                    Pred.startsWith(value, K36) -> 83
+                    Pred.startsWith(value, K37) -> 84
+                    Pred.startsWith(value, K56) -> 85
+                    Pred.startsWith(value, K38) -> 86
+                    Pred.startsWith(value, K39) -> 87
+                    Pred.startsWith(value, K40) -> 88
+                    Pred.startsWith(value, K41) -> 89
+                    Pred.startsWith(value, K42) -> 90
+                    Pred.startsWith(value, K43) -> 91
+                    Pred.startsWith(value, K58) -> 92
                     else -> -1
                 }
             else -> -1

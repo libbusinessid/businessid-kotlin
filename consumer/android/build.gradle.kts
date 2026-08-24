@@ -3,7 +3,7 @@
 
 // AGP 9 carries Kotlin support itself; a separate Kotlin plugin is refused.
 plugins {
-    id("com.android.library") version "9.3.1"
+    id("com.android.library") version "9.3.2"
 }
 
 android {
@@ -37,4 +37,18 @@ dependencies {
     implementation("io.libbusinessid:businessid:${providers.gradleProperty("businessid.version").get()}")
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
+}
+
+// Lint's verdict depends on a network index of released plugin versions, which
+// it never declares as an input. A warm build directory therefore replays a
+// stale pass: this check reported success locally on a commit CI failed. It is
+// worth a few seconds to have a local run mean what it says.
+tasks.matching { it.name.startsWith("lint") }.configureEach {
+    outputs.upToDateWhen { false }
+}
+
+tasks.withType<Test>().configureEach {
+    // The version of the ruleset the engine build compiled in, so a resync does
+    // not have to be repeated by hand in a second build.
+    systemProperty("businessid.rules.version", providers.gradleProperty("businessid.rules").get())
 }

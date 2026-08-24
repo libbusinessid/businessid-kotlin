@@ -38,7 +38,7 @@ class ConsumerTest {
 
     @Test
     fun `the ruleset version is the one the engine was built from`() {
-        assertEquals("2026.08.26", engine.rulesInfo().rulesVersion)
+        assertEquals(System.getProperty("businessid.rules.version"), engine.rulesInfo().rulesVersion)
         assertEquals(StepStatus.VALID, engine.validate(IdentifierInput.of("lei", "00000000000000000098")).format.status)
     }
 

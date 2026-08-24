@@ -192,6 +192,11 @@ tasks.register<JavaExec>("mutationTest") {
     val jvmProperties = listOf(
         "-Dbusinessid.spec.dir=" + rootProject.layout.projectDirectory.dir("spec").asFile.absolutePath,
         "-Dbusinessid.project.version=" + project.version,
+        "-Dbusinessid.rules.version=" + rootProject.layout.projectDirectory.file("rules.lock").asFile
+            .readLines()
+            .first { it.trimStart().startsWith("rules_version") }
+            .substringAfter('"')
+            .substringBefore('"'),
         "-Dbusinessid.test.classes=" + layout.buildDirectory.dir("classes/kotlin/test").get().asFile.absolutePath,
         "-Dbusinessid.jar=" + tasks.jar.get().archiveFile.get().asFile.absolutePath,
         "-Dbusinessid.pom=" +
