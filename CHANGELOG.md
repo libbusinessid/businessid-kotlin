@@ -8,6 +8,8 @@ independently.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-25
+
 ### Changed
 
 - **Rules `2026.08.38`**, synchronized from `entid-org/spec` `v2026.08.38`,
