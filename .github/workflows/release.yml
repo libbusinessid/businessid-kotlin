@@ -205,11 +205,20 @@ jobs:
 
           # USER_MANAGED: this stops at VALIDATED and waits for a person. See the
           # header of this file.
-          id="$(curl --fail-with-body --silent --show-error \
+          #
+          # `if !` rather than letting `set -e` do it: with `--fail-with-body`
+          # the response body *is* the explanation, and it is inside the command
+          # substitution. Dying on the exit status throws it away and leaves a
+          # failed release with nothing but a number.
+          if ! id="$(curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Authorization: Bearer ${auth}" \
             --form "bundle=@build/central-bundle.zip" \
-            "https://central.sonatype.com/api/v1/publisher/upload?name=businessid-${VERSION}&publishingType=USER_MANAGED")"
+            "https://central.sonatype.com/api/v1/publisher/upload?name=businessid-${VERSION}&publishingType=USER_MANAGED")"; then
+            echo "::error::the Central Portal refused the upload"
+            printf '%s\n' "$id" >&2
+            exit 1
+          fi
 
           # The endpoint answers with a deployment id and nothing else. An empty
           # body with a 2xx is not a success anyone can act on.
@@ -232,10 +241,15 @@ jobs:
           auth="$(printf '%s:%s' "$CENTRAL_PORTAL_USERNAME" "$CENTRAL_PORTAL_PASSWORD" | base64 | tr -d '\n')"
 
           for _ in $(seq 1 60); do
-            body="$(curl --fail-with-body --silent --show-error \
+            if ! body="$(curl --fail-with-body --silent --show-error \
               --request POST \
               --header "Authorization: Bearer ${auth}" \
-              "https://central.sonatype.com/api/v1/publisher/status?id=${DEPLOYMENT}")"
+              "https://central.sonatype.com/api/v1/publisher/status?id=${DEPLOYMENT}")"; then
+              echo "::error::cannot read the status of deployment ${DEPLOYMENT}"
+              printf '%s\n' "$body" >&2
+              echo "It is uploaded. Look at https://central.sonatype.com/publishing/deployments" >&2
+              exit 1
+            fi
             state="$(printf '%s' "$body" | jq -r '.deploymentState // empty')"
             case "$state" in
               VALIDATED)
