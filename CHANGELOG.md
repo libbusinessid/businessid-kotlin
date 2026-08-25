@@ -8,6 +8,27 @@ independently.
 
 ## [Unreleased]
 
+### Changed
+
+- **The project is called EntID.** `businessid` becomes `entid` and the GitHub
+  organisation `libbusinessid` becomes `entid-org`, everywhere: the Gradle
+  module and the artifactId (`entid`), the Kotlin package (`io.libbusinessid` →
+  `org.entid`, so the sources move to `src/main/kotlin/org/entid/`), the engine
+  class (`BusinessIdEngine` → `EntIdEngine`, the name `engine-kotlin.md` gives
+  it), the convention plugin (`entid.kotlin-base`), every Gradle and system
+  property (`-Pentid.toolchain`, `entid.spec.dir`, …), the testee binary
+  (`entid-testee`), the pinned artefacts under `spec/` (`entid-rules.binpb`,
+  `entid-conformance.binpb`), the workflows, and the copyright header. The brand
+  is **EntID**; nothing becomes `LibEntID`, which is nobody's name.
+
+  Two names deliberately did **not** move with it. The Protobuf package is still
+  `libbusinessid.ir.v1`, because it belongs to `spec` and to the ruleset this
+  commit pins, not to this repository. And the conformance runner is still
+  fetched from `github.com/libbusinessid/spec`, because `go run` compares the
+  path it is given against the one `go.mod` *declares at that commit*, and the
+  pinned commit predates the rename. Both move with the next synchronization,
+  which is where they are `spec`'s to move.
+
 ### Added
 
 - A release workflow. Maven Central is the only way this engine reaches a
@@ -35,7 +56,7 @@ independently.
   never running for the first time — which is the shape of defect the first
   specification release produced seven times out of nine.
 
-- The first Kotlin engine: a generator that reads `businessid-rules.binpb`, runs
+- The first Kotlin engine: a generator that reads `entid-rules.binpb`, runs
   the twenty-five load checks of `ir.md` section 10 and emits Kotlin; the
   emitted rules; the primitives they call; and the public API.
 - Support for all eighteen frozen capability identifiers and all sixty-three IR
@@ -91,7 +112,7 @@ independently.
   the tests on 17 whatever the daemon was — measured by asking a daemon on JDK 26
   what it launched the test executor with, and being told 17. The weekly matrix of
   `17`, `21` and `25` carried the same defect and exercised one JDK three times.
-  Both now move the *toolchain*, through `-Pbusinessid.toolchain`, and leave the
+  Both now move the *toolchain*, through `-Pentid.toolchain`, and leave the
   daemon on the JDK detekt and ktlint need.
 - A release build could have produced an unsigned artefact. `signing` was required
   only when `SIGNING_KEY` happened to be set, so a missing secret would have made
@@ -130,13 +151,16 @@ independently.
 
 ### Changed
 
-- The published groupId is `io.github.libbusinessid`. **The Kotlin package
-  namespace does not move and stays `io.libbusinessid`**; only the Maven
-  coordinates change. `io.libbusinessid` is not a namespace anyone can verify on
-  the Central Portal, which verifies a domain by DNS or a GitHub account by
-  ownership, and `libbusinessid.io` is a domain nobody here owns. A groupId cannot
-  be changed after a first publication without breaking every consumer, so
-  `PackagingTest` freezes it and `ReadmeTest` holds the install snippets to it.
+- The published groupId is `org.entid`, verified on the Central Portal against
+  the domain `entid.org` by a DNS TXT record. An earlier draft of this work
+  published `io.github.libbusinessid`, which cannot be verified at all: the
+  Portal verifies an `io.github.<account>` namespace by a public repository
+  under that GitHub account, and after the rename no such account exists —
+  `gh api users/libbusinessid` and `gh api orgs/libbusinessid` both answer 404,
+  and the freed name is available to a third party. A groupId cannot be changed
+  after a first publication without breaking every consumer, so the objection
+  was raised before the first tag rather than after it. `PackagingTest` freezes
+  the coordinate and `ReadmeTest` holds the install snippets to it.
 - `./scripts/verify.sh` now covers the far end of the supported JDK range and the
   resolution of every declared dependency, and prints both ends of the range in
   its one line. Section 11.4 asks for the entry point to be the only required

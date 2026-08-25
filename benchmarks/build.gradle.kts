@@ -1,14 +1,14 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 plugins {
-    id("businessid.kotlin-base")
+    id("entid.kotlin-base")
 }
 
 description = "JMH benchmarks: cold load, simple validation, complex checksum, early rejection, parallel execution."
 
 dependencies {
-    implementation(project(":businessid"))
+    implementation(project(":entid"))
     implementation(libs.jmh.core)
     compileOnly(libs.jmh.generator)
 }

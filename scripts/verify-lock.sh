@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Verifies the eight digests rules.lock declares against the files under spec/.
@@ -15,9 +15,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 declare -a PAIRS=(
-  "rules_sha256:businessid-rules.binpb"
-  "conformance_sha256:businessid-conformance.binpb"
-  "conformance_jsonl_sha256:businessid-conformance.jsonl"
+  "rules_sha256:entid-rules.binpb"
+  "conformance_sha256:entid-conformance.binpb"
+  "conformance_jsonl_sha256:entid-conformance.jsonl"
   "rules_proto_sha256:rules.proto"
   "conformance_proto_sha256:conformance.proto"
   "testee_proto_sha256:testee.proto"

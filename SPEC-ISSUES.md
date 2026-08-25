@@ -13,14 +13,14 @@ and the whole corpus passes under it.
 
 **Measured.** `engine.md` section 11.4 has the engine compare *la dernière
 release de `spec`* to its own `rules.lock`. The endpoint that phrase names —
-`/repos/libbusinessid/spec/releases/latest`, which is what `gh release view`
+`/repos/entid-org/spec/releases/latest`, which is what `gh release view`
 reads with no tag — excludes pre-releases, and `release.yml` marks every ruleset
 whose stability is not `stable` as a pre-release, deliberately, so that "a
 consumer or a downstream script never picks it up by accident". Both releases
 published so far are pre-releases. Run against `/latest` today:
 
 ```text
-$ gh release view --repo libbusinessid/spec
+$ gh release view --repo entid-org/spec
 release not found
 ```
 
@@ -77,7 +77,7 @@ its header explains this.
 ```
 
 Two releases exist, this repository synchronized from one, and its `rules.lock`
-carries `attestation_identity = "libbusinessid/spec/.github/workflows/release.yml@refs/tags/v0.1.1"`
+carries `attestation_identity = "entid-org/spec/.github/workflows/release.yml@refs/tags/v0.1.1"`
 and no header at all. The sentence is already false in the committed tree, and it
 is the paragraph titled "Verifying integrity" — the one a reader consults to
 decide what to check.
@@ -203,12 +203,12 @@ either is visible before it is merged rather than on a Monday.
 **Measured.** `ci.yml` carried a job named `Toolchain 25` and `scheduled.yml` a
 matrix of `17`, `21` and `25`, both setting `java-version` to the JDK under test.
 That moves the **Gradle daemon**. It does not move the compiler or the test JVM:
-`businessid.kotlin-base` sets `jvmToolchain(17)`, which binds every `JavaCompile`
+`entid.kotlin-base` sets `jvmToolchain(17)`, which binds every `JavaCompile`
 and every `Test` to a launcher for the pinned JDK whatever the daemon is. Asked
 directly, with the daemon on the newest JDK installed here:
 
 ```text
-$ JAVA_HOME=…/temurin-26.jdk/Contents/Home ./gradlew --info :businessid:test …
+$ JAVA_HOME=…/temurin-26.jdk/Contents/Home ./gradlew --info :entid:test …
 Starting process 'Gradle Test Executor 1'. Command: …/java/17.0.20-tem/bin/java
 ```
 
@@ -218,7 +218,7 @@ configures under a newer daemon — is not what either of them was named after, 
 is contradicted by the entry above: the analysers cannot run on such a daemon at
 all.
 
-**What this engine does.** `-Pbusinessid.toolchain=N` moves the toolchain and
+**What this engine does.** `-Pentid.toolchain=N` moves the toolchain and
 leaves the daemon alone, which is the way round that matches what the range
 means: the library's bytecode targets 11 and has to load and behave on the far
 end, while detekt and ktlint have to run on the JDK they were built against.

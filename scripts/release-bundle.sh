@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Builds the archive the Central Portal accepts, and refuses to hand over one it
@@ -53,14 +53,14 @@ done
 
 # The coordinates have one definition, and it is not this file.
 GROUP="$(sed -n 's/^group=//p' gradle.properties)"
-ARTIFACT="businessid"
+ARTIFACT="entid"
 if [ -z "$GROUP" ]; then
   printf 'release-bundle: no group in gradle.properties\n' >&2
   exit 1
 fi
 GROUP_PATH="${GROUP//.//}"
 
-STAGING="businessid/build/staging-repository"
+STAGING="entid/build/staging-repository"
 COMPONENT="$GROUP_PATH/$ARTIFACT/$VERSION"
 BUNDLE="$PWD/build/central-bundle.zip"
 
@@ -69,7 +69,7 @@ mkdir -p "$(dirname "$BUNDLE")"
 rm -f "$BUNDLE"
 
 ./gradlew --console=plain --quiet -Pversion="$VERSION" \
-  :businessid:publishMavenPublicationToLocalStagingRepository
+  :entid:publishMavenPublicationToLocalStagingRepository
 
 # What goes in: the component directory and nothing above it. `maven-metadata.xml`
 # sits one level up and describes a repository's view of every version there —

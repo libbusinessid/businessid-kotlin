@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # The single entry point of `engine.md` section 12.5.
@@ -106,7 +106,7 @@ step "lint" "${GRADLE[@]}" detekt --rerun
 step "public API" "${GRADLE[@]}" apiCheck --rerun
 
 step "tests" "${GRADLE[@]}" test --rerun
-fresh "tests" "businessid/build/test-results generator/build/test-results testee/build/test-results"
+fresh "tests" "entid/build/test-results generator/build/test-results testee/build/test-results"
 
 step "coverage and thresholds" "${GRADLE[@]}" coverage
 fresh "coverage and thresholds" "build/reports/coverage-summary.txt"
@@ -117,14 +117,14 @@ fresh "coverage and thresholds" "build/reports/coverage-summary.txt"
 # `assemble` is a lifecycle task with no actions of its own, and `--rerun`
 # reaches the tasks named on the command line rather than their dependencies —
 # so asking for `assemble` re-runs nothing, and the jar whose size this command
-# prints would be whatever an earlier build happened to leave. `:businessid:jar`
+# prints would be whatever an earlier build happened to leave. `:entid:jar`
 # is therefore named outright.
 #
 # And `--rerun` is a task option, not a build option: it binds to the task it
 # follows. `a b c --rerun` forces `c` alone and says nothing about the other
 # two. It has to be repeated after every task that must actually execute.
-step "packaging" "${GRADLE[@]}" :businessid:jar --rerun assemble auditPublishedDependencies --rerun
-fresh "packaging" "businessid/build/libs"
+step "packaging" "${GRADLE[@]}" :entid:jar --rerun assemble auditPublishedDependencies --rerun
+fresh "packaging" "entid/build/libs"
 
 # The Android consumer needs an SDK. Absent, this is a failure and not a shrug:
 # the line printed on success claims packaging was verified.
@@ -148,12 +148,18 @@ step "dependency resolution" "${GRADLE[@]}" resolveAllDependencies
 # The runner comes from `spec` and from nowhere else, pinned to the commit
 # rules.lock records under source_commit — the same commit as the corpus, so it
 # is impossible to judge a corpus with another comparator.
+#
+# The module path is the one `go.mod` declares at *that commit*, not the one the
+# repository answers to today: `go run` compares the two and refuses a path the
+# module does not claim. The organisation was renamed to `entid-org`, so this
+# says `libbusinessid` for as long as rules.lock pins a commit from before the
+# rename, and moves with the next synchronization.
 SOURCE_COMMIT="$(grep '^source_commit' rules.lock | cut -d'"' -f2)"
 step "conformance testee" "${GRADLE[@]}" :testee:installDist
 step "conformance" env GOTOOLCHAIN=auto go run \
   "github.com/libbusinessid/spec/cmd/conformance-runner@$SOURCE_COMMIT" \
-  -corpus spec/businessid-conformance.binpb \
-  -- ./testee/build/install/businessid-testee/bin/businessid-testee
+  -corpus spec/entid-conformance.binpb \
+  -- ./testee/build/install/entid-testee/bin/entid-testee
 
 # The far end of the supported range, and the last step because it is the most
 # expensive: a toolchain change recompiles everything into a build directory of
@@ -172,9 +178,9 @@ step "conformance" env GOTOOLCHAIN=auto go run \
 # each embed a Kotlin compiler that refuses a class file version newer than the
 # release it was built against, and both run inside the daemon. They had their
 # say above, on the JDK this project pins.
-step "toolchain $FAR_JDK" "${GRADLE[@]}" test --rerun -Pbusinessid.toolchain="$FAR_JDK"
+step "toolchain $FAR_JDK" "${GRADLE[@]}" test --rerun -Pentid.toolchain="$FAR_JDK"
 fresh "toolchain $FAR_JDK" \
-  "businessid/build/jdk$FAR_JDK/test-results generator/build/jdk$FAR_JDK/test-results testee/build/jdk$FAR_JDK/test-results"
+  "entid/build/jdk$FAR_JDK/test-results generator/build/jdk$FAR_JDK/test-results testee/build/jdk$FAR_JDK/test-results"
 
 # -- the one line ------------------------------------------------------------
 #
@@ -188,7 +194,7 @@ if [ -z "$CONFORMANCE" ] || [ "${DIFFERED:-1}" != "0" ]; then
   fail "conformance" "$WORK/conformance.log"
 fi
 
-TESTS="$(find businessid/build/test-results generator/build/test-results testee/build/test-results \
+TESTS="$(find entid/build/test-results generator/build/test-results testee/build/test-results \
   consumer/jvm/build/test-results consumer/android/build/test-results \
   -name '*.xml' -type f 2>/dev/null |
   xargs sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*/\1/p' 2>/dev/null |
@@ -197,7 +203,7 @@ TESTS="$(find businessid/build/test-results generator/build/test-results testee/
 COVERAGE="$(sed -n 's/^hand written *lines *\([0-9.]*\)% .* branches *\([0-9.]*\)%.*/\1%\/\2%/p' \
   build/reports/coverage-summary.txt)"
 
-JAR="$(find businessid/build/libs -name 'businessid-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' -type f | head -1)"
+JAR="$(find entid/build/libs -name 'entid-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' -type f | head -1)"
 JAR_BYTES="$(wc -c <"$JAR" | tr -d ' ')"
 
 printf 'verify ok — rules %s · conformance %s · tests %s · toolchains %s+%s · coverage %s · jar %s B\n' \

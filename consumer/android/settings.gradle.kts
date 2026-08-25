@@ -1,4 +1,4 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 // A build of its own: the point is to consume the published artefact the way an
@@ -21,11 +21,11 @@ dependencyResolutionManagement {
     repositories {
         maven {
             name = "engineStaging"
-            url = uri(providers.gradleProperty("businessid.repository").get())
+            url = uri(providers.gradleProperty("entid.repository").get())
         }
         google()
         mavenCentral()
     }
 }
 
-rootProject.name = "businessid-consumer-android"
+rootProject.name = "entid-consumer-android"

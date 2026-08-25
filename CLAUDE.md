@@ -85,8 +85,8 @@ with `curl` — no plugin runs with the signing key in scope — and as a
 `engine.md` section 11.4: merging verified code and publishing a package are not
 the same act, and the second is the only irreversible one.
 
-The published groupId is `io.github.libbusinessid`. **The Kotlin package
-namespace is `io.libbusinessid` and does not move.** A groupId cannot be changed
+The published groupId is `org.entid`. **The Kotlin package
+namespace is `org.entid` and does not move.** A groupId cannot be changed
 after a first publication without breaking every consumer, so `PackagingTest`
 freezes it rather than leaving it to a property file.
 

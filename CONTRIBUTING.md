@@ -4,13 +4,13 @@
 
 This repository holds an engine, not the rules. A rule, a country, a checksum
 algorithm or a conformance case belongs in
-[`libbusinessid/spec`](https://github.com/libbusinessid/spec), and reaches every
+[`entid-org/spec`](https://github.com/entid-org/spec), and reaches every
 engine from there.
 
 What belongs here: the generator, the runtime primitives, the public API, the
 build and the tests.
 
-**Never edit anything under `spec/` or `businessid/src/main/kotlin/io/libbusinessid/generated/`.**
+**Never edit anything under `spec/` or `entid/src/main/kotlin/org/entid/generated/`.**
 The first is a pinned copy of the specification; the second is emitted, and
 `./gradlew checkGenerated` fails when it drifts from the ruleset.
 
@@ -28,7 +28,7 @@ JDK 25 daemon both stop with `25.0.4` before reading a line of your code.
 
 That is about the *daemon*, not about the range this library supports.
 `verify.sh` compiles and runs the code on the far end of the range as well, with
-`-Pbusinessid.toolchain=25`: the toolchain moves, the daemon does not, and the
+`-Pentid.toolchain=25`: the toolchain moves, the daemon does not, and the
 analysers are left alone. Gradle fetches that JDK the first time and builds into
 `build/jdk25/` so it never overwrites what the pinned toolchain produced. The two
 ends of the range are named once, in `buildSrc/src/main/kotlin/BuildConstants.kt`.
@@ -40,8 +40,8 @@ nowhere else:
 ./gradlew :testee:installDist
 GOTOOLCHAIN=auto go run \
   "github.com/libbusinessid/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
-  -corpus spec/businessid-conformance.binpb \
-  -- ./testee/build/install/businessid-testee/bin/businessid-testee
+  -corpus spec/entid-conformance.binpb \
+  -- ./testee/build/install/entid-testee/bin/entid-testee
 ```
 
 ## What a change has to carry
@@ -95,26 +95,27 @@ discards, so the script a tag depends on is never running for the first time.
 Neither of these can be done by a workflow, and until both are done the release
 workflow fails on the tag rather than publishing half of anything.
 
-**Verify the namespace.** The published groupId is `io.github.libbusinessid` —
-the Maven coordinates, not the Kotlin package namespace, which stays
-`io.libbusinessid`. The Central Portal verifies `io.github.<account>` by having
-you create a public repository under that GitHub account, at
-<https://central.sonatype.com/publishing/namespaces>.
+**Verify the namespace** — *done*. The published groupId is `org.entid`,
+reserved and verified on the Central Portal against the domain `entid.org` by a
+DNS TXT record, at <https://central.sonatype.com/publishing/namespaces>. It is
+the Maven coordinate, which is a separate decision from the Kotlin package
+namespace even though the two now agree.
 
-> **This one is not settled, and has to be before the first tag.** There is no
-> GitHub account named `libbusinessid` any more: the organisation was renamed to
-> `entid-org` on 2026-08-18, and the old URLs work only as redirects.
-> `gh api users/libbusinessid` and `gh api orgs/libbusinessid` both answer 404.
-> A namespace cannot be verified against an account that does not exist, and the
-> name is now free for anyone else to register — so `io.github.libbusinessid`
-> cannot be verified as written and should not be published even if it could be.
+> The coordinate went through one objection, and this is what settled it. An
+> earlier draft published `io.github.libbusinessid`. The Central Portal verifies
+> an `io.github.<account>` namespace by having you create a public repository
+> under that GitHub account — and there is no such account: the organisation was
+> renamed to `entid-org` on 2026-08-18, and `gh api users/libbusinessid` and
+> `gh api orgs/libbusinessid` both answer 404. A namespace cannot be verified
+> against an account that does not exist, and worse, the freed name is available
+> for a third party to register.
 >
-> The verifiable alternatives are `io.github.entid-org`, a GitHub account this
-> project actually holds, or a domain it owns and can prove by DNS. Choosing
-> costs one line in `gradle.properties` and one in `PackagingTest` **today**, and
-> costs every consumer a rewrite after the first publication. This engine does
-> not choose it alone: the four engines share a name, and the rename is visibly
-> still in flight — everything in this repository is still called `businessid`.
+> A groupId cannot be changed after a first publication without breaking every
+> consumer, so the objection had to be raised before the first tag rather than
+> after it. A DNS-verified namespace does not have the failure mode that caused
+> it: a domain the project owns keeps answering whatever GitHub accounts are
+> called. `PackagingTest` freezes the coordinate and `ReadmeTest` holds the
+> install snippets to whatever the build publishes.
 
 **Create four repository secrets**, and only these four:
 
@@ -144,7 +145,7 @@ The rules are compiled into source code when this library is built. The
 published library holds that code, the primitives it calls and the API — no
 ruleset, no Protobuf, no decoder.
 
-Adding a Protobuf dependency to the `businessid` module, embedding a `.binpb` as
+Adding a Protobuf dependency to the `entid` module, embedding a `.binpb` as
 a resource, or adding a factory that takes a ruleset as bytes each break that,
 and each is a test failure: `PackagingTest` opens the published jar.
 

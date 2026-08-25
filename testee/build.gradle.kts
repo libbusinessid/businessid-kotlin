@@ -1,15 +1,15 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 plugins {
-    id("businessid.kotlin-base")
+    id("entid.kotlin-base")
     application
 }
 
 description = "Conformance testee: reads TesteeRequest on stdin, calls the public API, writes TesteeResponse."
 
 dependencies {
-    implementation(project(":businessid"))
+    implementation(project(":entid"))
     // The generator answers the load_ruleset cases, exactly as testee.proto
     // field 7 describes for an engine that generates code ahead of time.
     implementation(project(":generator"))
@@ -17,8 +17,8 @@ dependencies {
 }
 
 application {
-    mainClass.set("io.libbusinessid.testee.MainKt")
-    applicationName = "businessid-testee"
+    mainClass.set("org.entid.testee.MainKt")
+    applicationName = "entid-testee"
 }
 
 // The runner speaks to this process over stdout. Nothing else may write there.

@@ -1,4 +1,4 @@
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 
 name: CI
@@ -89,7 +89,7 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Fuzz the engine and the generator
-        run: ./gradlew :businessid:fuzz :generator:fuzz
+        run: ./gradlew :entid:fuzz :generator:fuzz
 
       - name: Upload any finding
         if: failure()
@@ -131,7 +131,7 @@ jobs:
           cat > "$GNUPGHOME/params" <<'EOF'
           Key-Type: RSA
           Key-Length: 3072
-          Name-Real: LibBusinessID release rehearsal
+          Name-Real: EntID release rehearsal
           Name-Email: rehearsal@invalid
           Expire-Date: 0
           Passphrase: rehearsal
@@ -153,7 +153,7 @@ jobs:
         run: |
           set -euo pipefail
           version="$(sed -n 's/.*VALUE: String = "\(.*\)".*/\1/p' \
-            businessid/src/main/kotlin/io/libbusinessid/internal/EngineVersion.kt)"
+            entid/src/main/kotlin/org/entid/internal/EngineVersion.kt)"
           ./scripts/release-bundle.sh "$version"
 
       - name: What would be published

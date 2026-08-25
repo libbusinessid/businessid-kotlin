@@ -1,4 +1,4 @@
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # engine.md section 11.4: the engine fetches the release, the release does not
@@ -55,7 +55,7 @@ concurrency:
 
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
-  SPEC_REPO: libbusinessid/spec
+  SPEC_REPO: entid-org/spec
   SIGNER_WORKFLOW: .github/workflows/release.yml
   # `github.event.inputs` rather than `inputs`: it is defined for every event,
   # and is null outside a dispatch.
@@ -107,8 +107,8 @@ jobs:
           release="$(gh api "repos/${SPEC_REPO}/releases/tags/${tag}")"
           version="$(printf '%s' "$release" | jq -r '
             [.assets[].name
-             | select(startswith("businessid-manifest-") and endswith(".json"))
-             | ltrimstr("businessid-manifest-") | rtrimstr(".json")]
+             | select(startswith("entid-manifest-") and endswith(".json"))
+             | ltrimstr("entid-manifest-") | rtrimstr(".json")]
             | unique | if length == 1 then .[0] else "" end')"
           [ -n "$version" ] || { echo "::error::release ${tag} carries no single manifest asset"; exit 1; }
 
@@ -129,11 +129,11 @@ jobs:
           changed=true
           if [ "$version" != "$(lock_value rules_version)" ]; then
             reason="rules version $(lock_value rules_version) is not ${version} (${tag})"
-          elif [ -n "$(asset_digest "businessid-rules-${version}.binpb")" ] \
-            && [ "$(asset_digest "businessid-rules-${version}.binpb")" != "$(lock_value rules_sha256)" ]; then
+          elif [ -n "$(asset_digest "entid-rules-${version}.binpb")" ] \
+            && [ "$(asset_digest "entid-rules-${version}.binpb")" != "$(lock_value rules_sha256)" ]; then
             reason="version ${version} matches but the bundle digest does not"
-          elif [ -n "$(asset_digest "businessid-conformance-${version}.binpb")" ] \
-            && [ "$(asset_digest "businessid-conformance-${version}.binpb")" != "$(lock_value conformance_sha256)" ]; then
+          elif [ -n "$(asset_digest "entid-conformance-${version}.binpb")" ] \
+            && [ "$(asset_digest "entid-conformance-${version}.binpb")" != "$(lock_value conformance_sha256)" ]; then
             reason="version ${version} matches but the corpus digest does not"
           else
             changed=false
@@ -203,7 +203,7 @@ jobs:
           # certificate's source repository digest is filled from the OIDC token
           # and cannot be forged by it. This is the commit the specification
           # checkout below is pinned to, and the one rules.lock will record.
-          commit="$(gh attestation verify "businessid-manifest-${VERSION}.json" \
+          commit="$(gh attestation verify "entid-manifest-${VERSION}.json" \
             "${identity[@]}" --format json \
             --jq '.[0].verificationResult.signature.certificate.sourceRepositoryDigest')"
           if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
@@ -217,15 +217,15 @@ jobs:
           # step above: the digests of the two files the attestation does not
           # cover are covered by a file it does.
           for artefact in \
-            "businessid-rules-${VERSION}.binpb" \
-            "businessid-conformance-${VERSION}.binpb" \
-            "businessid-conformance-${VERSION}.jsonl.gz" \
-            "businessid-manifest-${VERSION}.json" \
+            "entid-rules-${VERSION}.binpb" \
+            "entid-conformance-${VERSION}.binpb" \
+            "entid-conformance-${VERSION}.jsonl.gz" \
+            "entid-manifest-${VERSION}.json" \
             rules.proto conformance.proto testee.proto ir.md features.md SHA256SUMS; do
             gh attestation verify "$artefact" "${identity[@]}" --source-digest "$commit"
           done
 
-          manifest="businessid-manifest-${VERSION}.json"
+          manifest="entid-manifest-${VERSION}.json"
           for pair in "rulesVersion:${VERSION}" "sourceCommit:${commit}"; do
             field="${pair%%:*}"
             want="${pair#*:}"
@@ -290,7 +290,7 @@ jobs:
         if: env.PROCEED == 'true'
         run: |
           set -euo pipefail
-          manifest="${RUNNER_TEMP}/artifacts/businessid-manifest-${VERSION}.json"
+          manifest="${RUNNER_TEMP}/artifacts/entid-manifest-${VERSION}.json"
           field() { jq -r ".$1" "$manifest"; }
 
           # Assembled beside the artefacts and checked against them before a byte
@@ -333,9 +333,9 @@ jobs:
           set -euo pipefail
           a="${RUNNER_TEMP}/artifacts"
           mkdir -p spec
-          cp "$a/businessid-rules-${VERSION}.binpb" spec/businessid-rules.binpb
-          cp "$a/businessid-conformance-${VERSION}.binpb" spec/businessid-conformance.binpb
-          gzip -dc "$a/businessid-conformance-${VERSION}.jsonl.gz" > spec/businessid-conformance.jsonl
+          cp "$a/entid-rules-${VERSION}.binpb" spec/entid-rules.binpb
+          cp "$a/entid-conformance-${VERSION}.binpb" spec/entid-conformance.binpb
+          gzip -dc "$a/entid-conformance-${VERSION}.jsonl.gz" > spec/entid-conformance.jsonl
           for schema in rules.proto conformance.proto testee.proto ir.md features.md; do
             cp "$a/$schema" "spec/$schema"
           done
@@ -362,7 +362,7 @@ jobs:
             "${RUNNER_TEMP}/artifacts" \
             "${VERSION}" \
             "${SOURCE_COMMIT}" \
-            businessid-kotlin \
+            entid-kotlin \
             "${GITHUB_WORKSPACE}/spec/PROVENANCE.md"
 
       # -- 4. regenerate the emitted code -------------------------------------
@@ -421,7 +421,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -c "$branch"
-          git add --all -- spec rules.lock businessid/src/main/kotlin/io/libbusinessid/generated
+          git add --all -- spec rules.lock entid/src/main/kotlin/org/entid/generated
           if git diff --cached --quiet; then
             echo "The release changed nothing this repository tracks; no pull request." \
               | tee -a "$GITHUB_STEP_SUMMARY"
@@ -444,7 +444,7 @@ jobs:
           fi
 
           {
-            printf 'Automated synchronization of the LibBusinessID rules, by `.github/workflows/rules-sync.yml`.\n\n'
+            printf 'Automated synchronization of the EntID rules, by `.github/workflows/rules-sync.yml`.\n\n'
             printf -- '- rules version: `%s`\n' "${VERSION}"
             printf -- '- source tag: `%s`\n' "${TAG}"
             printf -- '- source commit: `%s`, taken from the signing certificate\n' "${SOURCE_COMMIT}"

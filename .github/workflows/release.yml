@@ -1,4 +1,4 @@
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Publishing to Maven Central, through the Central Portal.
@@ -66,7 +66,7 @@
 # What has never run
 # ---------------------------------------------------------------------------
 #
-# At the time of writing, the `io.github.libbusinessid` namespace is not verified
+# At the time of writing, the `org.entid` namespace is not verified
 # on the Portal and none of the four secrets exists. Everything up to and
 # including `scripts/release-bundle.sh` has been run — CI rehearses it on every
 # pull request with a throwaway key. The two steps below that speak to the Portal
@@ -118,7 +118,7 @@ jobs:
           version="${TAG#v}"
 
           declared="$(sed -n 's/.*VALUE: String = "\(.*\)".*/\1/p' \
-            businessid/src/main/kotlin/io/libbusinessid/internal/EngineVersion.kt)"
+            entid/src/main/kotlin/org/entid/internal/EngineVersion.kt)"
           if [ -z "$declared" ]; then
             echo "::error::cannot read EngineVersion.VALUE"
             exit 1
@@ -214,7 +214,7 @@ jobs:
             --request POST \
             --header "Authorization: Bearer ${auth}" \
             --form "bundle=@build/central-bundle.zip" \
-            "https://central.sonatype.com/api/v1/publisher/upload?name=businessid-${VERSION}&publishingType=USER_MANAGED")"; then
+            "https://central.sonatype.com/api/v1/publisher/upload?name=entid-${VERSION}&publishingType=USER_MANAGED")"; then
             echo "::error::the Central Portal refused the upload"
             printf '%s\n' "$id" >&2
             exit 1

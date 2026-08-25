@@ -1,4 +1,4 @@
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 
 root = true
@@ -23,7 +23,7 @@ ktlint_ignore_back_ticked_identifier = true
 # than after the single object that happens to implement it.
 ktlint_standard_filename = disabled
 
-[businessid/src/main/kotlin/io/libbusinessid/generated/**.kt]
+[entid/src/main/kotlin/org/entid/generated/**.kt]
 ktlint = disabled
 
 [*.{yml,yaml,json,toml}]

@@ -1,4 +1,4 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 // AGP 9 carries Kotlin support itself; a separate Kotlin plugin is refused.
@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "io.libbusinessid.consumer.android"
+    namespace = "org.entid.consumer.android"
     compileSdk = 36
 
     defaultConfig {
@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    implementation("io.github.libbusinessid:businessid:${providers.gradleProperty("businessid.version").get()}")
+    implementation("org.entid:entid:${providers.gradleProperty("entid.version").get()}")
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
 }
@@ -50,5 +50,5 @@ tasks.matching { it.name.startsWith("lint") }.configureEach {
 tasks.withType<Test>().configureEach {
     // The version of the ruleset the engine build compiled in, so a resync does
     // not have to be repeated by hand in a second build.
-    systemProperty("businessid.rules.version", providers.gradleProperty("businessid.rules").get())
+    systemProperty("entid.rules.version", providers.gradleProperty("entid.rules").get())
 }

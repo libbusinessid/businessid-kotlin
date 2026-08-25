@@ -1,10 +1,10 @@
-# businessid — Kotlin engine
+# entid — Kotlin engine
 
 Offline canonicalisation, format validation and checksum validation of business
 identifiers, for the JVM and for Android.
 
 The rules are not interpreted at runtime. A generator reads
-`spec/businessid-rules.binpb` when this library is built, runs the twenty-five
+`spec/entid-rules.binpb` when this library is built, runs the twenty-five
 load checks of `ir.md` section 10, and emits Kotlin. What ships is that emitted
 code, the primitives it calls, and a hand-written API — no ruleset, no Protobuf,
 no decoder.
@@ -59,7 +59,7 @@ Gradle:
 
 ```kotlin
 dependencies {
-    implementation("io.github.libbusinessid:businessid:0.1.0")
+    implementation("org.entid:entid:0.1.0")
 }
 ```
 
@@ -67,8 +67,8 @@ Maven:
 
 ```xml
 <dependency>
-  <groupId>io.github.libbusinessid</groupId>
-  <artifactId>businessid</artifactId>
+  <groupId>org.entid</groupId>
+  <artifactId>entid</artifactId>
   <version>0.1.0</version>
 </dependency>
 ```
@@ -79,11 +79,11 @@ build if that stops being true.
 ## Kotlin
 
 ```kotlin
-import io.libbusinessid.BusinessIdEngine
-import io.libbusinessid.IdentifierInput
-import io.libbusinessid.IdentifierKind
+import org.entid.EntIdEngine
+import org.entid.IdentifierInput
+import org.entid.IdentifierKind
 
-val engine = BusinessIdEngine.default()
+val engine = EntIdEngine.default()
 
 val report = engine.validate(IdentifierInput(IdentifierKind.SIRET, "012 345 674 00001"))
 report.canonicalValue   // "01234567400001"
@@ -157,9 +157,9 @@ engine.validate(input, ValidationOptions(ValidationProfile.STRICT_CURRENT)) // c
 ## Java
 
 ```java
-import io.libbusinessid.*;
+import org.entid.*;
 
-BusinessIdEngine engine = BusinessIdEngine.defaultEngine();
+EntIdEngine engine = EntIdEngine.defaultEngine();
 
 ValidationReport report = engine.validate(IdentifierInput.of("siret", "01234567400001"));
 report.getFormat().getStatus();          // VALID
@@ -168,7 +168,7 @@ report.getKindToken();                   // "siret"
 
 Three things read differently from Java, and each has a reason:
 
-- `BusinessIdEngine.defaultEngine()` — `default` is a Java keyword, so the
+- `EntIdEngine.defaultEngine()` — `default` is a Java keyword, so the
   method Kotlin reads best is one Java cannot spell.
 - `IdentifierInput.of(kind, value)` — `IdentifierKind` is a value class, which
   the specification requires so an unknown kind stays representable. Java sees
@@ -228,15 +228,15 @@ A custom ruleset goes through the generator, at build time:
 
 ```bash
 ./gradlew generateEngine \
-  -PbusinessidBundle=/path/to/your/businessid-rules.binpb
+  -PentidBundle=/path/to/your/entid-rules.binpb
 ```
 
 or directly:
 
 ```bash
-java -cp generator.jar io.libbusinessid.generator.MainKt \
+java -cp generator.jar org.entid.generator.MainKt \
   --bundle your-rules.binpb \
-  --out src/main/kotlin/io/libbusinessid/generated
+  --out src/main/kotlin/org/entid/generated
 ```
 
 The generator refuses to emit a single line from a ruleset that fails any of the
@@ -246,7 +246,7 @@ twenty-five checks, and names the check that refused it.
 
 | Path | Role |
 | --- | --- |
-| `businessid/` | The published library: emitted rules, primitives, API. |
+| `entid/` | The published library: emitted rules, primitives, API. |
 | `generator/` | Reads the ruleset, runs the load checks, emits Kotlin. Not published. |
 | `testee/` | The conformance testee. Not published. |
 | `benchmarks/` | JMH harness. Not published. |
@@ -297,8 +297,8 @@ Tagging and publishing stay manual. Nothing in this workflow releases anything.
 
 ## Releasing
 
-The library is published to Maven Central as `io.github.libbusinessid:businessid`
-— the Maven coordinates; the Kotlin package namespace is `io.libbusinessid` and
+The library is published to Maven Central as `org.entid:entid`
+— the Maven coordinates; the Kotlin package namespace is `org.entid` and
 does not move.
 
 A tag `vx.y.z` is the only thing that publishes.
@@ -328,8 +328,8 @@ testee and the tests that prove it does not cheat; it contains no comparator.
 ./gradlew :testee:installDist
 GOTOOLCHAIN=auto go run \
   "github.com/libbusinessid/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
-  -corpus spec/businessid-conformance.binpb \
-  -- ./testee/build/install/businessid-testee/bin/businessid-testee
+  -corpus spec/entid-conformance.binpb \
+  -- ./testee/build/install/entid-testee/bin/entid-testee
 ```
 
 ```text
@@ -354,7 +354,7 @@ compilation, tests, the shared conformance suite against the runner from `spec`,
 lint, format, coverage and its thresholds, the resolution of every declared
 dependency, packaging including both consumer projects, and both ends of the
 supported JDK range — the pinned toolchain throughout, and the far end compiled
-and run again with `-Pbusinessid.toolchain`. It prints that one line when
+and run again with `-Pentid.toolchain`. It prints that one line when
 everything passes, the failing step's
 output and only that when something does not, and exits non-zero either way it
 should. `engine.md` section 12.5 asks for it; `CLAUDE.md` says why it is worth
@@ -368,7 +368,7 @@ The pieces are still there when a single one is what you want:
 ./gradlew generateEngine   # re-emit the rules from the ruleset
 ./gradlew checkGenerated   # fail when the committed sources are stale
 ./gradlew fuzz             # Jazzer, beyond the regression corpus
-./gradlew test -Pbusinessid.toolchain=25   # the far end of the range, alone
+./gradlew test -Pentid.toolchain=25   # the far end of the range, alone
 ./gradlew :benchmarks:jmh  # the five measurements section 14 asks for, and more
 ```
 
@@ -390,7 +390,7 @@ run, and on which inputs it happened to generate, would not be a measurement.
 ### Mutation testing
 
 ```bash
-./gradlew :businessid:mutationTest
+./gradlew :entid:mutationTest
 ```
 
 Pitest is aimed at the runtime primitives and the pipeline, where an off-by-one

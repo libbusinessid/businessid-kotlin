@@ -1,4 +1,4 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 plugins {
@@ -8,7 +8,7 @@ plugins {
 
 // The library, exactly as a project would take it from a repository.
 dependencies {
-    implementation("io.github.libbusinessid:businessid:${providers.gradleProperty("businessid.version").get()}")
+    implementation("org.entid:entid:${providers.gradleProperty("entid.version").get()}")
     testImplementation(kotlin("test"))
 }
 
@@ -19,14 +19,14 @@ kotlin {
 }
 
 application {
-    mainClass.set("io.libbusinessid.consumer.MainKt")
+    mainClass.set("org.entid.consumer.MainKt")
 }
 
 tasks.test {
     useJUnitPlatform()
     // The version of the ruleset the engine build compiled in, so a resync does
     // not have to be repeated by hand in a second build.
-    systemProperty("businessid.rules.version", providers.gradleProperty("businessid.rules").get())
+    systemProperty("entid.rules.version", providers.gradleProperty("entid.rules").get())
 }
 
 // What a caller actually inherits.
@@ -46,7 +46,7 @@ tasks.register("verifyDependencies") {
     }
     doLast {
         val expected = listOf(
-            "io.github.libbusinessid:businessid",
+            "org.entid:entid",
             "org.jetbrains.kotlin:kotlin-stdlib",
             "org.jetbrains:annotations",
         )
