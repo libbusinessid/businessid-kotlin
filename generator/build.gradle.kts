@@ -1,13 +1,13 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 plugins {
-    id("businessid.kotlin-base")
+    id("entid.kotlin-base")
     id("com.google.protobuf")
     application
 }
 
-description = "Reads businessid-rules.binpb, runs the 25 load checks, emits Kotlin."
+description = "Reads entid-rules.binpb, runs the 25 load checks, emits Kotlin."
 
 // Protobuf lives here and only here. Nothing in this module reaches the
 // published library, and the library never depends on this module.
@@ -53,16 +53,16 @@ sourceSets {
 }
 
 application {
-    mainClass.set("io.libbusinessid.generator.MainKt")
+    mainClass.set("org.entid.generator.MainKt")
 }
 
 val stageProtoSchemas = tasks.register<Sync>("stageProtoSchemas") {
     description = "Places spec/*.proto under the package path protoc expects."
     val spec = rootProject.layout.projectDirectory.dir("spec")
     into(rootProject.layout.buildDirectory.dir("proto"))
-    from(spec.file("rules.proto")) { into("libbusinessid/ir/v1") }
-    from(spec.file("conformance.proto")) { into("libbusinessid/conformance/v1") }
-    from(spec.file("testee.proto")) { into("libbusinessid/testee/v1") }
+    from(spec.file("rules.proto")) { into("entid/ir/v1") }
+    from(spec.file("conformance.proto")) { into("entid/conformance/v1") }
+    from(spec.file("testee.proto")) { into("entid/testee/v1") }
 }
 
 tasks.named("generateProto") {
@@ -82,5 +82,5 @@ tasks.test {
     dependsOn(tasks.named("generateProto"))
     val descriptors = layout.buildDirectory.file("descriptors/schemas.desc")
     inputs.file(descriptors).withPropertyName("descriptorSet")
-    systemProperty("businessid.descriptor.set", descriptors.get().asFile.absolutePath)
+    systemProperty("entid.descriptor.set", descriptors.get().asFile.absolutePath)
 }

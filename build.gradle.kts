@@ -1,4 +1,4 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 plugins {
@@ -16,7 +16,7 @@ val rulesVersion: String = layout.projectDirectory.file("rules.lock").asFile
     .substringBefore('"')
 
 val generatedSourceDir: Directory =
-    layout.projectDirectory.dir("businessid/src/main/kotlin/io/libbusinessid/generated")
+    layout.projectDirectory.dir("entid/src/main/kotlin/org/entid/generated")
 
 val generatorClasspath: Configuration = configurations.create("generatorClasspath")
 
@@ -32,10 +32,10 @@ dependencies {
  */
 val generateEngine = tasks.register<JavaExec>("generateEngine") {
     group = "build"
-    description = "Regenerates io.libbusinessid.generated from spec/businessid-rules.binpb."
+    description = "Regenerates org.entid.generated from spec/entid-rules.binpb."
     classpath = generatorClasspath
-    mainClass.set("io.libbusinessid.generator.MainKt")
-    val bundle = layout.projectDirectory.file("spec/businessid-rules.binpb")
+    mainClass.set("org.entid.generator.MainKt")
+    val bundle = layout.projectDirectory.file("spec/entid-rules.binpb")
     val lock = layout.projectDirectory.file("rules.lock")
     inputs.file(bundle)
     inputs.file(lock)
@@ -57,8 +57,8 @@ val checkGenerated = tasks.register<JavaExec>("checkGenerated") {
     group = "verification"
     description = "Verifies that the committed generated sources match the pinned bundle."
     classpath = generatorClasspath
-    mainClass.set("io.libbusinessid.generator.MainKt")
-    val bundle = layout.projectDirectory.file("spec/businessid-rules.binpb")
+    mainClass.set("org.entid.generator.MainKt")
+    val bundle = layout.projectDirectory.file("spec/entid-rules.binpb")
     val lock = layout.projectDirectory.file("rules.lock")
     inputs.file(bundle)
     inputs.file(lock)
@@ -98,14 +98,14 @@ dependencies {
 }
 
 val ktlintSources = listOf(
-    "businessid/src/**/*.kt",
+    "entid/src/**/*.kt",
     "generator/src/**/*.kt",
     "testee/src/**/*.kt",
     "benchmarks/src/**/*.kt",
     "buildSrc/src/**/*.kt",
     "**/*.gradle.kts",
     "!**/build/**",
-    "!businessid/src/main/kotlin/io/libbusinessid/generated/**",
+    "!entid/src/main/kotlin/org/entid/generated/**",
 )
 
 // Both analysers embed a Kotlin compiler that refuses a class file version newer
@@ -205,7 +205,7 @@ abstract class CoverageGate : DefaultTask() {
             for (i in 0 until packages.length) {
                 val node = packages.item(i) as org.w3c.dom.Element
                 val name = node.getAttribute("name").replace('/', '.')
-                val into = if (name.startsWith("io.libbusinessid.generated")) emitted else handWritten
+                val into = if (name.startsWith("org.entid.generated")) emitted else handWritten
                 var child = node.firstChild
                 while (child != null) {
                     if (child is org.w3c.dom.Element && child.tagName == "counter") {
@@ -255,9 +255,9 @@ abstract class CoverageGate : DefaultTask() {
 val coverage = tasks.register<CoverageGate>("coverage") {
     group = "verification"
     description = "Splits coverage between hand written and emitted code, and gates the first."
-    dependsOn(":businessid:koverXmlReport", ":generator:koverXmlReport", ":testee:koverXmlReport")
+    dependsOn(":entid:koverXmlReport", ":generator:koverXmlReport", ":testee:koverXmlReport")
     reports.from(
-        project(":businessid").layout.buildDirectory.file("reports/kover/report.xml"),
+        project(":entid").layout.buildDirectory.file("reports/kover/report.xml"),
         project(":generator").layout.buildDirectory.file("reports/kover/report.xml"),
         project(":testee").layout.buildDirectory.file("reports/kover/report.xml"),
     )
@@ -284,7 +284,7 @@ val stagingRepository = layout.buildDirectory.dir("staging-repository")
 val publishForConsumers = tasks.register("publishForConsumers") {
     group = "verification"
     description = "Publishes the library into a local repository the consumer builds read."
-    dependsOn(":businessid:publishMavenPublicationToLocalStagingRepository")
+    dependsOn(":entid:publishMavenPublicationToLocalStagingRepository")
 }
 
 fun consumerTask(name: String, directory: String, arguments: List<String>) = tasks.register<Exec>(name) {
@@ -293,16 +293,16 @@ fun consumerTask(name: String, directory: String, arguments: List<String>) = tas
     dependsOn(publishForConsumers)
     workingDir = layout.projectDirectory.dir("consumer/$directory").asFile
     val wrapper = layout.projectDirectory.file("gradlew").asFile.absolutePath
-    val repository = project(":businessid").layout.buildDirectory
+    val repository = project(":entid").layout.buildDirectory
         .dir("staging-repository").get().asFile.toURI().toString()
     commandLine(
         listOf(
             wrapper,
             "--project-dir",
             workingDir.absolutePath,
-            "-Pbusinessid.version=${project.version}",
-            "-Pbusinessid.rules=$rulesVersion",
-            "-Pbusinessid.repository=$repository",
+            "-Pentid.version=${project.version}",
+            "-Pentid.rules=$rulesVersion",
+            "-Pentid.repository=$repository",
             "--no-daemon",
             "--console=plain",
             // The nested build is not allowed to replay a verdict. These

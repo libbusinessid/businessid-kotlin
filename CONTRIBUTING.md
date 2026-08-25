@@ -4,13 +4,13 @@
 
 This repository holds an engine, not the rules. A rule, a country, a checksum
 algorithm or a conformance case belongs in
-[`libbusinessid/spec`](https://github.com/libbusinessid/spec), and reaches every
+[`entid-org/spec`](https://github.com/entid-org/spec), and reaches every
 engine from there.
 
 What belongs here: the generator, the runtime primitives, the public API, the
 build and the tests.
 
-**Never edit anything under `spec/` or `businessid/src/main/kotlin/io/libbusinessid/generated/`.**
+**Never edit anything under `spec/` or `entid/src/main/kotlin/org/entid/generated/`.**
 The first is a pinned copy of the specification; the second is emitted, and
 `./gradlew checkGenerated` fails when it drifts from the ruleset.
 
@@ -24,9 +24,14 @@ The first is a pinned copy of the specification; the second is emitted, and
 Run it on **JDK 17**, the toolchain this project pins. Detekt and ktlint each
 embed a Kotlin compiler that refuses a class file version newer than the release
 it was built against, and neither offers a way to point at another JVM — on a
-JDK 25 daemon both stop with `25.0.4` before reading a line of your code. CI runs
-them in a job of their own for that reason, and builds and tests the code itself
-across the whole supported range.
+JDK 25 daemon both stop with `25.0.4` before reading a line of your code.
+
+That is about the *daemon*, not about the range this library supports.
+`verify.sh` compiles and runs the code on the far end of the range as well, with
+`-Pentid.toolchain=25`: the toolchain moves, the daemon does not, and the
+analysers are left alone. Gradle fetches that JDK the first time and builds into
+`build/jdk25/` so it never overwrites what the pinned toolchain produced. The two
+ends of the range are named once, in `buildSrc/src/main/kotlin/BuildConstants.kt`.
 
 Then the shared conformance suite, whose runner comes from `spec` and from
 nowhere else:
@@ -34,9 +39,9 @@ nowhere else:
 ```bash
 ./gradlew :testee:installDist
 GOTOOLCHAIN=auto go run \
-  "github.com/libbusinessid/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
-  -corpus spec/businessid-conformance.binpb \
-  -- ./testee/build/install/businessid-testee/bin/businessid-testee
+  "github.com/entid-org/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
+  -corpus spec/entid-conformance.binpb \
+  -- ./testee/build/install/entid-testee/bin/entid-testee
 ```
 
 ## What a change has to carry
@@ -61,6 +66,71 @@ A README example demonstrates an API, so a synthetic value is the right choice
 there — and it must say what it is and name the conformance case it comes from.
 A real value would designate a company without anyone needing it to.
 
+## Releasing
+
+A tag publishes; nothing else does. Merging verified code and publishing a
+package are two acts, and the second is the only one that cannot be taken back —
+a version on Maven Central is never replaced or removed, only deprecated.
+
+The steps, in order:
+
+1. Move the `## [Unreleased]` section of `CHANGELOG.md` to `## [x.y.z]`.
+2. Set `EngineVersion.VALUE` to `x.y.z` and `version` in `gradle.properties` to
+   `x.y.z-SNAPSHOT` for the work that follows. `./scripts/verify.sh` has to pass.
+3. Push the tag `vx.y.z`. `.github/workflows/release.yml` checks that the tag,
+   `EngineVersion.VALUE` and the changelog agree, runs the whole CI suite at that
+   commit, builds and signs the bundle, and uploads it to the Central Portal as a
+   `USER_MANAGED` deployment.
+4. The deployment stops at `VALIDATED`. Open
+   <https://central.sonatype.com/publishing/deployments>, read what it says it
+   would publish, and press Publish.
+
+`./scripts/release-bundle.sh x.y.z` builds the same archive locally, given
+`SIGNING_KEY` and `SIGNING_PASSWORD`, and refuses to produce one the Portal would
+reject. CI runs it on every pull request with a throwaway key it generates and
+discards, so the script a tag depends on is never running for the first time.
+
+### What a human has to set up once
+
+Neither of these can be done by a workflow, and until both are done the release
+workflow fails on the tag rather than publishing half of anything.
+
+**Verify the namespace** — *done*. The published groupId is `org.entid`,
+reserved and verified on the Central Portal against the domain `entid.org` by a
+DNS TXT record, at <https://central.sonatype.com/publishing/namespaces>. It is
+the Maven coordinate, which is a separate decision from the Kotlin package
+namespace even though the two now agree.
+
+> The coordinate went through one objection, and this is what settled it. An
+> earlier draft published `io.github.libbusinessid`. The Central Portal verifies
+> an `io.github.<account>` namespace by having you create a public repository
+> under that GitHub account — and there is no such account: the organisation was
+> renamed to `entid-org` on 2026-08-18, and `gh api users/libbusinessid` and
+> `gh api orgs/libbusinessid` both answer 404. A namespace cannot be verified
+> against an account that does not exist, and worse, the freed name is available
+> for a third party to register.
+>
+> A groupId cannot be changed after a first publication without breaking every
+> consumer, so the objection had to be raised before the first tag rather than
+> after it. A DNS-verified namespace does not have the failure mode that caused
+> it: a domain the project owns keeps answering whatever GitHub accounts are
+> called. `PackagingTest` freezes the coordinate and `ReadmeTest` holds the
+> install snippets to whatever the build publishes.
+
+**Create four repository secrets**, and only these four:
+
+| Secret | Where it comes from |
+| --- | --- |
+| `CENTRAL_PORTAL_USERNAME` | <https://central.sonatype.com/account>, *Generate User Token*. The token is a username and password pair; regenerating it invalidates the previous one. |
+| `CENTRAL_PORTAL_PASSWORD` | The password half of that same token. |
+| `SIGNING_KEY` | An ASCII armoured PGP private key: `gpg --armor --export-secret-keys <id>`. Its public half has to be on a keyserver Central checks — `gpg --keyserver keys.openpgp.org --send-keys <id>`. |
+| `SIGNING_PASSWORD` | That key's passphrase. |
+
+The publishing job checks all four before it checks out the repository, and names
+every one that is missing. A release build also refuses to produce an unsigned
+artefact at all: `signing` is required whenever the version is not a snapshot, so
+a missing key is a failed build rather than a jar nobody signed.
+
 ## Interpreting the specification
 
 If two documents disagree, or one is silent on something observable, **stop and
@@ -75,7 +145,7 @@ The rules are compiled into source code when this library is built. The
 published library holds that code, the primitives it calls and the API — no
 ruleset, no Protobuf, no decoder.
 
-Adding a Protobuf dependency to the `businessid` module, embedding a `.binpb` as
+Adding a Protobuf dependency to the `entid` module, embedding a `.binpb` as
 a resource, or adding a factory that takes a ruleset as bytes each break that,
 and each is a test failure: `PackagingTest` opens the published jar.
 

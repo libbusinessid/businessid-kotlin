@@ -1,11 +1,11 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-package io.libbusinessid.consumer
+package org.entid.consumer
 
-import io.libbusinessid.BusinessIdEngine
-import io.libbusinessid.IdentifierInput
-import io.libbusinessid.IdentifierKind
+import org.entid.EntIdEngine
+import org.entid.IdentifierInput
+import org.entid.IdentifierKind
 
 /**
  * The shortest useful program a consumer can write.
@@ -14,7 +14,7 @@ import io.libbusinessid.IdentifierKind
  * `siret-synthetic-valid-001`.
  */
 fun main() {
-    val engine = BusinessIdEngine.default()
+    val engine = EntIdEngine.default()
     val report = engine.validate(IdentifierInput(IdentifierKind.SIRET, "012 345 674 00001"))
     println("canonical: ${report.canonicalValue}")
     println("format:    ${report.format.status.wireName}/${report.format.reasonCode.wireName}")

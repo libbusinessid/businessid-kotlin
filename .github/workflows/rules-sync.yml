@@ -1,4 +1,4 @@
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # engine.md section 11.4: the engine fetches the release, the release does not
@@ -55,7 +55,7 @@ concurrency:
 
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
-  SPEC_REPO: libbusinessid/spec
+  SPEC_REPO: entid-org/spec
   SIGNER_WORKFLOW: .github/workflows/release.yml
   # `github.event.inputs` rather than `inputs`: it is defined for every event,
   # and is null outside a dispatch.
@@ -69,6 +69,7 @@ jobs:
     permissions:
       contents: write # push the synchronization branch
       pull-requests: write # open it, and ask for auto-merge
+      statuses: write # publish the section 12.6 verdict under the name the protection requires
     steps:
       - name: Check out the engine
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -107,8 +108,8 @@ jobs:
           release="$(gh api "repos/${SPEC_REPO}/releases/tags/${tag}")"
           version="$(printf '%s' "$release" | jq -r '
             [.assets[].name
-             | select(startswith("businessid-manifest-") and endswith(".json"))
-             | ltrimstr("businessid-manifest-") | rtrimstr(".json")]
+             | select(startswith("entid-manifest-") and endswith(".json"))
+             | ltrimstr("entid-manifest-") | rtrimstr(".json")]
             | unique | if length == 1 then .[0] else "" end')"
           [ -n "$version" ] || { echo "::error::release ${tag} carries no single manifest asset"; exit 1; }
 
@@ -129,11 +130,11 @@ jobs:
           changed=true
           if [ "$version" != "$(lock_value rules_version)" ]; then
             reason="rules version $(lock_value rules_version) is not ${version} (${tag})"
-          elif [ -n "$(asset_digest "businessid-rules-${version}.binpb")" ] \
-            && [ "$(asset_digest "businessid-rules-${version}.binpb")" != "$(lock_value rules_sha256)" ]; then
+          elif [ -n "$(asset_digest "entid-rules-${version}.binpb")" ] \
+            && [ "$(asset_digest "entid-rules-${version}.binpb")" != "$(lock_value rules_sha256)" ]; then
             reason="version ${version} matches but the bundle digest does not"
-          elif [ -n "$(asset_digest "businessid-conformance-${version}.binpb")" ] \
-            && [ "$(asset_digest "businessid-conformance-${version}.binpb")" != "$(lock_value conformance_sha256)" ]; then
+          elif [ -n "$(asset_digest "entid-conformance-${version}.binpb")" ] \
+            && [ "$(asset_digest "entid-conformance-${version}.binpb")" != "$(lock_value conformance_sha256)" ]; then
             reason="version ${version} matches but the corpus digest does not"
           else
             changed=false
@@ -203,7 +204,7 @@ jobs:
           # certificate's source repository digest is filled from the OIDC token
           # and cannot be forged by it. This is the commit the specification
           # checkout below is pinned to, and the one rules.lock will record.
-          commit="$(gh attestation verify "businessid-manifest-${VERSION}.json" \
+          commit="$(gh attestation verify "entid-manifest-${VERSION}.json" \
             "${identity[@]}" --format json \
             --jq '.[0].verificationResult.signature.certificate.sourceRepositoryDigest')"
           if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
@@ -217,15 +218,16 @@ jobs:
           # step above: the digests of the two files the attestation does not
           # cover are covered by a file it does.
           for artefact in \
-            "businessid-rules-${VERSION}.binpb" \
-            "businessid-conformance-${VERSION}.binpb" \
-            "businessid-conformance-${VERSION}.jsonl.gz" \
-            "businessid-manifest-${VERSION}.json" \
-            rules.proto conformance.proto testee.proto ir.md features.md SHA256SUMS; do
+            "entid-rules-${VERSION}.binpb" \
+            "entid-conformance-${VERSION}.binpb" \
+            "entid-conformance-${VERSION}.jsonl.gz" \
+            "entid-manifest-${VERSION}.json" \
+            rules.proto conformance.proto testee.proto ir.md features.md \
+            spec.md engine.md engine-kotlin.md SHA256SUMS; do
             gh attestation verify "$artefact" "${identity[@]}" --source-digest "$commit"
           done
 
-          manifest="businessid-manifest-${VERSION}.json"
+          manifest="entid-manifest-${VERSION}.json"
           for pair in "rulesVersion:${VERSION}" "sourceCommit:${commit}"; do
             field="${pair%%:*}"
             want="${pair#*:}"
@@ -290,7 +292,7 @@ jobs:
         if: env.PROCEED == 'true'
         run: |
           set -euo pipefail
-          manifest="${RUNNER_TEMP}/artifacts/businessid-manifest-${VERSION}.json"
+          manifest="${RUNNER_TEMP}/artifacts/entid-manifest-${VERSION}.json"
           field() { jq -r ".$1" "$manifest"; }
 
           # Assembled beside the artefacts and checked against them before a byte
@@ -333,20 +335,25 @@ jobs:
           set -euo pipefail
           a="${RUNNER_TEMP}/artifacts"
           mkdir -p spec
-          cp "$a/businessid-rules-${VERSION}.binpb" spec/businessid-rules.binpb
-          cp "$a/businessid-conformance-${VERSION}.binpb" spec/businessid-conformance.binpb
-          gzip -dc "$a/businessid-conformance-${VERSION}.jsonl.gz" > spec/businessid-conformance.jsonl
+          cp "$a/entid-rules-${VERSION}.binpb" spec/entid-rules.binpb
+          cp "$a/entid-conformance-${VERSION}.binpb" spec/entid-conformance.binpb
+          gzip -dc "$a/entid-conformance-${VERSION}.jsonl.gz" > spec/entid-conformance.jsonl
           for schema in rules.proto conformance.proto testee.proto ir.md features.md; do
             cp "$a/$schema" "spec/$schema"
           done
           cp "${RUNNER_TEMP}/rules.lock" rules.lock
 
-          # spec/spec.md, spec/engine.md and spec/engine-kotlin.md are left
-          # alone. They are prose this engine is written against, they are not
-          # release artefacts, and no digest in rules.lock pins them — so they
-          # track the specification's default branch and not the commit a release
-          # was cut from. Rewinding them to the attested commit would delete
-          # sections written after it, including the one this workflow implements.
+          # And the prose contracts, which section 11.4 step 3 names outright:
+          # `spec.md`, `engine.md` and this engine's `engine-<language>.md`. They
+          # were left alone here once, on the reasoning that no digest in
+          # rules.lock pins them, so they tracked the specification's default
+          # branch instead — which meant nothing ever wrote them, and three
+          # documents naming a renamed organisation sat in the tree until a human
+          # noticed. They are published and attested with the schemas, so they
+          # move with the release like everything else.
+          for contract in spec.md engine.md engine-kotlin.md; do
+            cp "$a/$contract" "spec/$contract"
+          done
 
       - name: Write spec/PROVENANCE.md
         if: env.PROCEED == 'true'
@@ -362,7 +369,7 @@ jobs:
             "${RUNNER_TEMP}/artifacts" \
             "${VERSION}" \
             "${SOURCE_COMMIT}" \
-            businessid-kotlin \
+            entid-kotlin \
             "${GITHUB_WORKSPACE}/spec/PROVENANCE.md"
 
       # -- 4. regenerate the emitted code -------------------------------------
@@ -391,7 +398,7 @@ jobs:
         # bundle that changed under it.
         run: ./gradlew --console=plain generateEngine --rerun
 
-      # -- 5. the entry point of section 12.5 ---------------------------------
+      # -- 5. the entry point of section 12.6 ---------------------------------
 
       - name: Verify
         id: verify
@@ -421,7 +428,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -c "$branch"
-          git add --all -- spec rules.lock businessid/src/main/kotlin/io/libbusinessid/generated
+          git add --all -- spec rules.lock entid/src/main/kotlin/org/entid/generated
           if git diff --cached --quiet; then
             echo "The release changed nothing this repository tracks; no pull request." \
               | tee -a "$GITHUB_STEP_SUMMARY"
@@ -444,7 +451,7 @@ jobs:
           fi
 
           {
-            printf 'Automated synchronization of the LibBusinessID rules, by `.github/workflows/rules-sync.yml`.\n\n'
+            printf 'Automated synchronization of the EntID rules, by `.github/workflows/rules-sync.yml`.\n\n'
             printf -- '- rules version: `%s`\n' "${VERSION}"
             printf -- '- source tag: `%s`\n' "${TAG}"
             printf -- '- source commit: `%s`, taken from the signing certificate\n' "${SOURCE_COMMIT}"
@@ -490,7 +497,50 @@ jobs:
             fi
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           printf 'Pull request: %s\n' "$url" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # -- 7. the verdict, as a commit status ---------------------------------
+
+      - name: Publish the verification verdict as a commit status
+        if: steps.pr.outputs.sha != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.pr.outputs.sha }}
+          VERIFY: ${{ steps.verify.outcome }}
+        run: |
+          set -euo pipefail
+          # Section 11.4: the workflow publishes the verdict itself.
+          #
+          # A pull request opened with a repository's own `GITHUB_TOKEN` triggers
+          # no `pull_request` workflow — GitHub cuts there so an action cannot
+          # call itself in a loop. The branch protection on `main` requires
+          # `Verify`, `ci.yml` is the only thing that publishes `Verify`, and
+          # `ci.yml` never starts on a pull request this workflow opened: the
+          # check would stay *Expected — Waiting for status to be reported* and
+          # auto-merge would never fire. This engine raised it in #10 and left it
+          # to be decided rather than working around it; section 11.4 decided it,
+          # and this step is the decision.
+          #
+          # The entry point has already run, above, on exactly this tree. What is
+          # missing is not the verdict but its name, so this publishes the result
+          # under the name the protection asks for. A repository writes its own
+          # commit statuses, so this needs `statuses: write` and no wider token —
+          # which is the property section 11.4 bought and will not spend.
+          if [ "${VERIFY}" = "success" ]; then
+            state=success
+            description="$(tail -1 "${RUNNER_TEMP}/verify.log" | cut -c1-140)"
+          else
+            state=failure
+            description='./scripts/verify.sh failed; the pull request carries the output'
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            -f state="$state" \
+            -f context='Verify' \
+            -f description="$description" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            >/dev/null
+          printf 'Commit status `Verify` = %s on %s\n' "$state" "$SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Ask for auto-merge
         if: steps.pr.outputs.url != '' && steps.verify.outcome == 'success'
@@ -501,18 +551,21 @@ jobs:
           set -euo pipefail
           # Only on a green verification. Auto-merge merges when nothing
           # *blocks*, which is not the same as on green: without a branch
-          # protection requiring the section 12.5 entry point, a pull request
+          # protection requiring the section 12.6 entry point, a pull request
           # with no checks at all counts as unblocked. This condition is the
           # guard this workflow owns; the branch protection is the one the
-          # repository owes, and README.md names both.
+          # repository owes, and README.md names both. The step above is what
+          # makes the protection satisfiable at all.
           if ! gh pr merge "$URL" --auto --squash; then
             echo "::warning::auto-merge could not be enabled on ${URL}"
             {
               echo 'Auto-merge could not be enabled. It needs both of:'
               echo ''
               echo '- Settings → General → Pull Requests → **Allow auto-merge**;'
-              echo '- Settings → Branches → a protection on the default branch requiring the CI'
-              echo '  job that runs `./scripts/verify.sh`, and requiring nothing else.'
+              echo '- Settings → Branches → a protection on the default branch requiring'
+              echo '  `Verify`, and requiring nothing else. Section 11.4: the entry point is'
+              echo '  the only required check, or "green" has two definitions and auto-merge'
+              echo '  follows the weaker one.'
               echo ''
               echo 'The pull request is open and green; it merges by hand until then.'
             } | tee -a "$GITHUB_STEP_SUMMARY"

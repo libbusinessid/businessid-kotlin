@@ -1,4 +1,4 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 pluginManagement {
@@ -20,9 +20,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "businessid-kotlin"
+rootProject.name = "entid-kotlin"
 
-include("businessid")
+include("entid")
 include("generator")
 include("testee")
 include("benchmarks")

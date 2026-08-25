@@ -1,4 +1,4 @@
-# Copyright The LibBusinessID Authors.
+# Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # The long running checks: fuzzing beyond a smoke run, mutation testing,
@@ -58,8 +58,8 @@ jobs:
           # engine; ci.yml already runs a fuzz smoke test on every pull request.
           # A guard that costs forty minutes gets deleted the first time someone
           # is in a hurry.
-          BUSINESSID_FUZZ_SECONDS: ${{ github.event.inputs.fuzzSeconds || (github.event_name == 'pull_request' && '60' || '600') }}
-        run: ./gradlew :businessid:fuzz :generator:fuzz -Pfuzz.seconds="$BUSINESSID_FUZZ_SECONDS"
+          ENTID_FUZZ_SECONDS: ${{ github.event.inputs.fuzzSeconds || (github.event_name == 'pull_request' && '60' || '600') }}
+        run: ./gradlew :entid:fuzz :generator:fuzz -Pfuzz.seconds="$ENTID_FUZZ_SECONDS"
 
       - name: Upload any finding
         if: always()
@@ -118,14 +118,14 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
       - name: Mutate the primitives and the pipeline
-        run: ./gradlew :businessid:mutationTest
+        run: ./gradlew :entid:mutationTest
 
       - name: Upload the report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mutation-report
-          path: businessid/build/reports/pitest/
+          path: entid/build/reports/pitest/
           retention-days: 30
 
   toolchains:
@@ -138,29 +138,39 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The daemon stays on the JDK this project pins whatever the matrix says,
+      # and `-Pentid.toolchain` below is what actually moves the compiler
+      # and the test JVM.
+      #
+      # It used to be the other way round, and that was the bug: this job set
+      # `java-version: ${{ matrix.jdk }}`, which moves the daemon, while
+      # `jvmToolchain` kept compilation and the tests on 17 regardless. Measured
+      # by asking a daemon on JDK 26 what it launched the test executor with, and
+      # being told 17. Three entries in the matrix, one JDK ever exercised, and
+      # nothing ever failed to say so.
       - name: Set up the JDK
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
-          java-version: ${{ matrix.jdk }}
+          java-version: '17'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          # Gradle provisions the toolchain this job asks for; without `jdks`
+          # here it downloads it again every week.
+          gradle-home-cache-includes: |
+            caches
+            notifications
+            jdks
 
       # Compile, test, cover and package across the range, which is what this
-      # job exists to prove. Not `./scripts/verify.sh` either, though that is the
-      # entry point everywhere else: verify runs the analysers, and the analysers
-      # are exactly what cannot run here. This job is the one place where a
-      # narrower command is the honest one, and it is narrower by omission rather
-      # than by disagreement — every check it drops is run by verify on the JDK
-      # this project pins.
+      # job exists to prove. `scripts/verify.sh` already covers both ends of it
+      # on every pull request; this is the middle, and the weekly confirmation
+      # that the ends have not moved.
       #
-      # Not `build`: that pulls in `check`, and `check`
-      # runs detekt and ktlint, neither of which can run in a daemon JVM newer
-      # than the release they were built against — detekt 1.23.8 stops with the
-      # bare version number before reading a line. SPEC-ISSUES.md records it,
-      # and ci.yml runs the analysers once in a job of their own on the JDK this
-      # project pins. This job ran `build` and so failed on JDK 25 for a reason
-      # that had nothing to do with the toolchain range it is testing.
+      # Not `./scripts/verify.sh` itself, and not `build`: both run detekt and
+      # ktlint, which is a job of their own on the pinned JDK. This job is
+      # narrower by omission rather than by disagreement.
       - name: Build and test
-        run: ./gradlew test coverage assemble
+        run: ./gradlew test coverage assemble -Pentid.toolchain=${{ matrix.jdk }}

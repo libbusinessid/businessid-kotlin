@@ -1,16 +1,16 @@
-# businessid — Kotlin engine
+# entid — Kotlin engine
 
 Offline canonicalisation, format validation and checksum validation of business
 identifiers, for the JVM and for Android.
 
 The rules are not interpreted at runtime. A generator reads
-`spec/businessid-rules.binpb` when this library is built, runs the twenty-five
+`spec/entid-rules.binpb` when this library is built, runs the twenty-five
 load checks of `ir.md` section 10, and emits Kotlin. What ships is that emitted
 code, the primitives it calls, and a hand-written API — no ruleset, no Protobuf,
 no decoder.
 
 ```text
-rules 2026.08.33, format version 1
+rules 2026.08.38, format version 1
 94 identifier definitions · 37 kinds · 250 programs · 2386 IR nodes
 conformance: 676 of 676 cases matched, 0 differed
 ```
@@ -59,7 +59,7 @@ Gradle:
 
 ```kotlin
 dependencies {
-    implementation("io.libbusinessid:businessid:0.1.0")
+    implementation("org.entid:entid:0.1.0")
 }
 ```
 
@@ -67,8 +67,8 @@ Maven:
 
 ```xml
 <dependency>
-  <groupId>io.libbusinessid</groupId>
-  <artifactId>businessid</artifactId>
+  <groupId>org.entid</groupId>
+  <artifactId>entid</artifactId>
   <version>0.1.0</version>
 </dependency>
 ```
@@ -79,11 +79,11 @@ build if that stops being true.
 ## Kotlin
 
 ```kotlin
-import io.libbusinessid.BusinessIdEngine
-import io.libbusinessid.IdentifierInput
-import io.libbusinessid.IdentifierKind
+import org.entid.EntIdEngine
+import org.entid.IdentifierInput
+import org.entid.IdentifierKind
 
-val engine = BusinessIdEngine.default()
+val engine = EntIdEngine.default()
 
 val report = engine.validate(IdentifierInput(IdentifierKind.SIRET, "012 345 674 00001"))
 report.canonicalValue   // "01234567400001"
@@ -157,9 +157,9 @@ engine.validate(input, ValidationOptions(ValidationProfile.STRICT_CURRENT)) // c
 ## Java
 
 ```java
-import io.libbusinessid.*;
+import org.entid.*;
 
-BusinessIdEngine engine = BusinessIdEngine.defaultEngine();
+EntIdEngine engine = EntIdEngine.defaultEngine();
 
 ValidationReport report = engine.validate(IdentifierInput.of("siret", "01234567400001"));
 report.getFormat().getStatus();          // VALID
@@ -168,7 +168,7 @@ report.getKindToken();                   // "siret"
 
 Three things read differently from Java, and each has a reason:
 
-- `BusinessIdEngine.defaultEngine()` — `default` is a Java keyword, so the
+- `EntIdEngine.defaultEngine()` — `default` is a Java keyword, so the
   method Kotlin reads best is one Java cannot spell.
 - `IdentifierInput.of(kind, value)` — `IdentifierKind` is a value class, which
   the specification requires so an unknown kind stays representable. Java sees
@@ -228,15 +228,15 @@ A custom ruleset goes through the generator, at build time:
 
 ```bash
 ./gradlew generateEngine \
-  -PbusinessidBundle=/path/to/your/businessid-rules.binpb
+  -PentidBundle=/path/to/your/entid-rules.binpb
 ```
 
 or directly:
 
 ```bash
-java -cp generator.jar io.libbusinessid.generator.MainKt \
+java -cp generator.jar org.entid.generator.MainKt \
   --bundle your-rules.binpb \
-  --out src/main/kotlin/io/libbusinessid/generated
+  --out src/main/kotlin/org/entid/generated
 ```
 
 The generator refuses to emit a single line from a ruleset that fails any of the
@@ -246,7 +246,7 @@ twenty-five checks, and names the check that refused it.
 
 | Path | Role |
 | --- | --- |
-| `businessid/` | The published library: emitted rules, primitives, API. |
+| `entid/` | The published library: emitted rules, primitives, API. |
 | `generator/` | Reads the ruleset, runs the load checks, emits Kotlin. Not published. |
 | `testee/` | The conformance testee. Not published. |
 | `benchmarks/` | JMH harness. Not published. |
@@ -291,9 +291,49 @@ token:
 | --- | --- | --- |
 | Allow GitHub Actions to create and approve pull requests | Settings → Actions → General → Workflow permissions | Without it `gh pr create` refuses and step 6 cannot run at all. |
 | Allow auto-merge | Settings → General → Pull Requests | Without it `gh pr merge --auto` refuses. |
-| A branch protection on `main` requiring the CI job that runs `./scripts/verify.sh`, and requiring nothing else | Settings → Branches | Auto-merge merges when nothing *blocks*, which is not the same as on green. A second required check would give "green" two definitions, and auto-merge follows the weaker one. The scheduled workflow and Dependabot must not be required checks. |
+| A branch protection on `main` requiring `Verify`, and requiring nothing else | Settings → Branches | Auto-merge merges when nothing *blocks*, which is not the same as on green. A second required check would give "green" two definitions, and auto-merge follows the weaker one — section 11.4 says so outright. The scheduled workflow and Dependabot must not be required checks. |
+
+All three are on today.
+
+**Who publishes `Verify` on a synchronization pull request.** Not `ci.yml`: a
+pull request opened with a repository's own `GITHUB_TOKEN` starts no
+`pull_request` workflow, because GitHub cuts there so an action cannot call
+itself in a loop. A protection requiring a check that never starts would leave
+every synchronization waiting for ever. The workflow has already run
+`./scripts/verify.sh` on exactly that tree, so it publishes the result as a
+commit status under the name the protection asks for. That needs `statuses:
+write`, which a repository has over itself — not a wider token, which is the
+whole point of section 11.4.
+
+**This is also why `Toolchain 25` is not a required check, and must not become
+one.** The far end of the JDK range is inside `./scripts/verify.sh`, so the one
+required status covers it. Requiring a second check would give "green" two
+definitions and, since only `Verify` is published on a synchronization pull
+request, would block every one of them for ever.
 
 Tagging and publishing stay manual. Nothing in this workflow releases anything.
+
+## Releasing
+
+The library is published to Maven Central as `org.entid:entid`
+— the Maven coordinates; the Kotlin package namespace is `org.entid` and
+does not move.
+
+A tag `vx.y.z` is the only thing that publishes.
+`.github/workflows/release.yml` checks that the tag, `EngineVersion.VALUE` and
+the changelog agree, runs the whole CI suite at that commit, builds a signed
+bundle with `./scripts/release-bundle.sh`, and uploads it to the Central Portal
+as a `USER_MANAGED` deployment. It stops at `VALIDATED`; a person presses
+Publish, having read what the Portal says it would publish. A tag can be deleted
+and a deployment can be dropped — a version on Maven Central can only ever be
+deprecated.
+
+The upload is `curl` against the Portal's publisher API. Sonatype ships no Gradle
+plugin for the Portal, and what does the upload runs with a PGP private key and a
+publishing token in its environment, so it is four documented endpoints rather
+than a release orchestrator or a plugin on the build script classpath.
+`CONTRIBUTING.md` names the four repository secrets and the one namespace
+verification a human has to do before any of it works.
 
 ## Conformance
 
@@ -305,9 +345,9 @@ testee and the tests that prove it does not cheat; it contains no comparator.
 ```bash
 ./gradlew :testee:installDist
 GOTOOLCHAIN=auto go run \
-  "github.com/libbusinessid/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
-  -corpus spec/businessid-conformance.binpb \
-  -- ./testee/build/install/businessid-testee/bin/businessid-testee
+  "github.com/entid-org/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
+  -corpus spec/entid-conformance.binpb \
+  -- ./testee/build/install/entid-testee/bin/entid-testee
 ```
 
 ```text
@@ -324,15 +364,18 @@ One command verifies everything, and it is the one CI runs:
 ```
 
 ```text
-verify ok — rules 2026.08.33 · conformance 676/676 · tests 558 · coverage 99.04%/93.07% · jar 143045 B
+verify ok — rules 2026.08.38 · conformance 676/676 · tests 560 · toolchains 17+25 · coverage 99.04%/93.07% · jar 141566 B
 ```
 
 It covers the lock digests, the regeneration of the emitted sources,
 compilation, tests, the shared conformance suite against the runner from `spec`,
-lint, format, coverage and its thresholds, and packaging including both consumer
-projects. It prints that one line when everything passes, the failing step's
+lint, format, coverage and its thresholds, the resolution of every declared
+dependency, packaging including both consumer projects, and both ends of the
+supported JDK range — the pinned toolchain throughout, and the far end compiled
+and run again with `-Pentid.toolchain`. It prints that one line when
+everything passes, the failing step's
 output and only that when something does not, and exits non-zero either way it
-should. `engine.md` section 12.5 asks for it; `CLAUDE.md` says why it is worth
+should. `engine.md` section 12.6 asks for it; `CLAUDE.md` says why it is worth
 preferring to the pieces.
 
 The pieces are still there when a single one is what you want:
@@ -343,6 +386,7 @@ The pieces are still there when a single one is what you want:
 ./gradlew generateEngine   # re-emit the rules from the ruleset
 ./gradlew checkGenerated   # fail when the committed sources are stale
 ./gradlew fuzz             # Jazzer, beyond the regression corpus
+./gradlew test -Pentid.toolchain=25   # the far end of the range, alone
 ./gradlew :benchmarks:jmh  # the five measurements section 14 asks for, and more
 ```
 
@@ -364,7 +408,7 @@ run, and on which inputs it happened to generate, would not be a measurement.
 ### Mutation testing
 
 ```bash
-./gradlew :businessid:mutationTest
+./gradlew :entid:mutationTest
 ```
 
 Pitest is aimed at the runtime primitives and the pipeline, where an off-by-one

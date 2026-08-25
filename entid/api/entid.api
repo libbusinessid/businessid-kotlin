@@ -1,0 +1,295 @@
+public final class org/entid/CanonicalizationResult {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/entid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/entid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-ZBZ8xIA ()Ljava/lang/String;
+	public final fun component10 ()Lorg/entid/ReasonCode;
+	public final fun component11 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lorg/entid/ValidationProfile;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()I
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Lorg/entid/StepStatus;
+	public final fun copy-2XA7PeE (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/entid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;)Lorg/entid/CanonicalizationResult;
+	public static synthetic fun copy-2XA7PeE$default (Lorg/entid/CanonicalizationResult;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/entid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;ILjava/lang/Object;)Lorg/entid/CanonicalizationResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanonicalValue ()Ljava/lang/String;
+	public final fun getCountryCode ()Ljava/lang/String;
+	public final fun getEngineVersion ()Ljava/lang/String;
+	public final fun getFormatVersion ()I
+	public final fun getInputValue ()Ljava/lang/String;
+	public final fun getKind-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getKindToken ()Ljava/lang/String;
+	public final fun getMessageKey ()Ljava/lang/String;
+	public final fun getProfile ()Lorg/entid/ValidationProfile;
+	public final fun getReasonCode ()Lorg/entid/ReasonCode;
+	public final fun getRulesVersion ()Ljava/lang/String;
+	public final fun getStatus ()Lorg/entid/StepStatus;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/entid/Capability {
+	public fun <init> (ILjava/lang/String;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (ILjava/lang/String;)Lorg/entid/Capability;
+	public static synthetic fun copy$default (Lorg/entid/Capability;ILjava/lang/String;ILjava/lang/Object;)Lorg/entid/Capability;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCapabilityName ()Ljava/lang/String;
+	public final fun getId ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/entid/EntIdEngine {
+	public static final field Companion Lorg/entid/EntIdEngine$Companion;
+	public final fun canonicalize (Lorg/entid/IdentifierInput;)Lorg/entid/CanonicalizationResult;
+	public final fun canonicalize (Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;)Lorg/entid/CanonicalizationResult;
+	public static synthetic fun canonicalize$default (Lorg/entid/EntIdEngine;Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;ILjava/lang/Object;)Lorg/entid/CanonicalizationResult;
+	public final fun capabilities ()Ljava/util/List;
+	public static final fun defaultEngine ()Lorg/entid/EntIdEngine;
+	public final fun rulesInfo ()Lorg/entid/RulesInfo;
+	public final fun validate (Lorg/entid/IdentifierInput;)Lorg/entid/ValidationReport;
+	public final fun validate (Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;)Lorg/entid/ValidationReport;
+	public static synthetic fun validate$default (Lorg/entid/EntIdEngine;Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;ILjava/lang/Object;)Lorg/entid/ValidationReport;
+	public final fun validateChecksum (Lorg/entid/IdentifierInput;)Lorg/entid/ValidationReport;
+	public final fun validateChecksum (Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;)Lorg/entid/ValidationReport;
+	public static synthetic fun validateChecksum$default (Lorg/entid/EntIdEngine;Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;ILjava/lang/Object;)Lorg/entid/ValidationReport;
+	public final fun validateFormat (Lorg/entid/IdentifierInput;)Lorg/entid/ValidationReport;
+	public final fun validateFormat (Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;)Lorg/entid/ValidationReport;
+	public static synthetic fun validateFormat$default (Lorg/entid/EntIdEngine;Lorg/entid/IdentifierInput;Lorg/entid/ValidationOptions;ILjava/lang/Object;)Lorg/entid/ValidationReport;
+}
+
+public final class org/entid/EntIdEngine$Companion {
+	public final fun defaultEngine ()Lorg/entid/EntIdEngine;
+}
+
+public final class org/entid/EntIdEngineException : java/lang/RuntimeException {
+}
+
+public final class org/entid/IdentifierInput {
+	public static final field Companion Lorg/entid/IdentifierInput$Companion;
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-ZBZ8xIA ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy-Q-Pb0kI (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lorg/entid/IdentifierInput;
+	public static synthetic fun copy-Q-Pb0kI$default (Lorg/entid/IdentifierInput;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lorg/entid/IdentifierInput;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCountryCode ()Ljava/lang/String;
+	public final fun getKind-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getKindToken ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static final fun of (Ljava/lang/String;Ljava/lang/String;)Lorg/entid/IdentifierInput;
+	public static final fun of (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lorg/entid/IdentifierInput;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/entid/IdentifierInput$Companion {
+	public final fun of (Ljava/lang/String;Ljava/lang/String;)Lorg/entid/IdentifierInput;
+	public final fun of (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lorg/entid/IdentifierInput;
+	public static synthetic fun of$default (Lorg/entid/IdentifierInput$Companion;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lorg/entid/IdentifierInput;
+}
+
+public final class org/entid/IdentifierKind {
+	public static final field Companion Lorg/entid/IdentifierKind$Companion;
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lorg/entid/IdentifierKind;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class org/entid/IdentifierKind$Companion {
+	public final fun getCEGJEGYZEKSZAM-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getCNPJ-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getCODICE_FISCALE_IMPRESA-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getCOMPANY_NUMBER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getCORPORATE_NUMBER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getCRO_NUMBER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getCUI-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getCVR-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getDUNS-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getEIK-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getEIN-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getENTERPRISE_NUMBER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getEORI-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getEUID-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getFIRMENBUCHNUMMER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getGEMI-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getHANDELSREGISTERNUMMER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getHE_NUMBER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getICO-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getJURIDINIO_ASMENS_KODAS-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getKRS-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getKVK-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getLEI-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getMATICNA_STEVILKA-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getMBR_NUMBER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getMBS-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getNIF-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getNIPC-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getORGANISATIONSNUMMER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getRCS_NUMBER-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getREGISTRACIJAS_NUMURS-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getREGISTRIKOOD-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getSIREN-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getSIRET-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getUSCC-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getVAT-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getY_TUNNUS-ZBZ8xIA ()Ljava/lang/String;
+}
+
+public final class org/entid/ReasonCode : java/lang/Enum {
+	public static final field CHECKSUM_NOT_PUBLISHED Lorg/entid/ReasonCode;
+	public static final field COUNTRY_MISMATCH Lorg/entid/ReasonCode;
+	public static final field EMPTY Lorg/entid/ReasonCode;
+	public static final field INCOMPATIBLE_RULESET Lorg/entid/ReasonCode;
+	public static final field INPUT_TOO_LONG Lorg/entid/ReasonCode;
+	public static final field INVALID_CHARACTERS Lorg/entid/ReasonCode;
+	public static final field INVALID_CHECKSUM Lorg/entid/ReasonCode;
+	public static final field INVALID_ENCODING Lorg/entid/ReasonCode;
+	public static final field INVALID_FORMAT Lorg/entid/ReasonCode;
+	public static final field INVALID_LENGTH Lorg/entid/ReasonCode;
+	public static final field INVALID_RULESET Lorg/entid/ReasonCode;
+	public static final field MISSING_COUNTRY_CODE Lorg/entid/ReasonCode;
+	public static final field NOT_REQUESTED Lorg/entid/ReasonCode;
+	public static final field NOT_RUN_FORMAT_INVALID Lorg/entid/ReasonCode;
+	public static final field NOT_RUN_FORMAT_UNSUPPORTED Lorg/entid/ReasonCode;
+	public static final field OK Lorg/entid/ReasonCode;
+	public static final field REGISTRY_NOT_CONFIGURED Lorg/entid/ReasonCode;
+	public static final field UNSUPPORTED_CHECKSUM Lorg/entid/ReasonCode;
+	public static final field UNSUPPORTED_COUNTRY Lorg/entid/ReasonCode;
+	public static final field UNSUPPORTED_FORMAT Lorg/entid/ReasonCode;
+	public static final field UNSUPPORTED_KIND Lorg/entid/ReasonCode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lorg/entid/ReasonCode;
+	public static fun values ()[Lorg/entid/ReasonCode;
+}
+
+public final class org/entid/RulesInfo {
+	public fun <init> (Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/util/List;)Lorg/entid/RulesInfo;
+	public static synthetic fun copy$default (Lorg/entid/RulesInfo;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lorg/entid/RulesInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEngineVersion ()Ljava/lang/String;
+	public final fun getFormatVersion ()I
+	public final fun getRulesVersion ()Ljava/lang/String;
+	public final fun getSourceDigest ()Ljava/lang/String;
+	public final fun getSupportedKinds ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/entid/StepResult {
+	public fun <init> (Lorg/entid/ValidationLevel;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;)V
+	public synthetic fun <init> (Lorg/entid/ValidationLevel;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lorg/entid/ValidationLevel;
+	public final fun component2 ()Lorg/entid/StepStatus;
+	public final fun component3 ()Lorg/entid/ReasonCode;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Lorg/entid/ValidationLevel;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;)Lorg/entid/StepResult;
+	public static synthetic fun copy$default (Lorg/entid/StepResult;Lorg/entid/ValidationLevel;Lorg/entid/StepStatus;Lorg/entid/ReasonCode;Ljava/lang/String;ILjava/lang/Object;)Lorg/entid/StepResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLevel ()Lorg/entid/ValidationLevel;
+	public final fun getMessageKey ()Ljava/lang/String;
+	public final fun getReasonCode ()Lorg/entid/ReasonCode;
+	public final fun getStatus ()Lorg/entid/StepStatus;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/entid/StepStatus : java/lang/Enum {
+	public static final field INVALID Lorg/entid/StepStatus;
+	public static final field NOT_RUN Lorg/entid/StepStatus;
+	public static final field UNSUPPORTED Lorg/entid/StepStatus;
+	public static final field VALID Lorg/entid/StepStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lorg/entid/StepStatus;
+	public static fun values ()[Lorg/entid/StepStatus;
+}
+
+public final class org/entid/ValidationLevel : java/lang/Enum {
+	public static final field CHECKSUM Lorg/entid/ValidationLevel;
+	public static final field FORMAT Lorg/entid/ValidationLevel;
+	public static final field REGISTRY Lorg/entid/ValidationLevel;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lorg/entid/ValidationLevel;
+	public static fun values ()[Lorg/entid/ValidationLevel;
+}
+
+public final class org/entid/ValidationOptions {
+	public fun <init> ()V
+	public fun <init> (Lorg/entid/ValidationProfile;)V
+	public synthetic fun <init> (Lorg/entid/ValidationProfile;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lorg/entid/ValidationProfile;
+	public final fun copy (Lorg/entid/ValidationProfile;)Lorg/entid/ValidationOptions;
+	public static synthetic fun copy$default (Lorg/entid/ValidationOptions;Lorg/entid/ValidationProfile;ILjava/lang/Object;)Lorg/entid/ValidationOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getProfile ()Lorg/entid/ValidationProfile;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/entid/ValidationProfile : java/lang/Enum {
+	public static final field COMPATIBLE Lorg/entid/ValidationProfile;
+	public static final field STRICT_CURRENT Lorg/entid/ValidationProfile;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lorg/entid/ValidationProfile;
+	public static fun values ()[Lorg/entid/ValidationProfile;
+}
+
+public final class org/entid/ValidationReport {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/entid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lorg/entid/StepResult;Lorg/entid/StepResult;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-ZBZ8xIA ()Ljava/lang/String;
+	public final fun component10 ()Lorg/entid/StepResult;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lorg/entid/ValidationProfile;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()I
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Lorg/entid/StepResult;
+	public final fun copy-KIBL9_k (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/entid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lorg/entid/StepResult;Lorg/entid/StepResult;)Lorg/entid/ValidationReport;
+	public static synthetic fun copy-KIBL9_k$default (Lorg/entid/ValidationReport;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/entid/ValidationProfile;Ljava/lang/String;ILjava/lang/String;Lorg/entid/StepResult;Lorg/entid/StepResult;ILjava/lang/Object;)Lorg/entid/ValidationReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanonicalValue ()Ljava/lang/String;
+	public final fun getChecksum ()Lorg/entid/StepResult;
+	public final fun getCountryCode ()Ljava/lang/String;
+	public final fun getEngineVersion ()Ljava/lang/String;
+	public final fun getFormat ()Lorg/entid/StepResult;
+	public final fun getFormatVersion ()I
+	public final fun getInputValue ()Ljava/lang/String;
+	public final fun getKind-ZBZ8xIA ()Ljava/lang/String;
+	public final fun getKindToken ()Ljava/lang/String;
+	public final fun getProfile ()Lorg/entid/ValidationProfile;
+	public final fun getRulesVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isChecksumValid ()Z
+	public final fun isFormatValid ()Z
+	public final fun isFullyValidated ()Z
+	public final fun isInvalid ()Z
+	public fun toString ()Ljava/lang/String;
+}
+

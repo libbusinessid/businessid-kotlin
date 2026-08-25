@@ -9,131 +9,43 @@ and the whole corpus passes under it.
 
 ## Open
 
-### "the newest release" is the one endpoint that cannot see any release there is
+### `tools/check_lock.sh` verifies seven of the eight lock digests
 
-**Measured.** `engine.md` section 11.4 has the engine compare *la dernière
-release de `spec`* to its own `rules.lock`. The endpoint that phrase names —
-`/repos/libbusinessid/spec/releases/latest`, which is what `gh release view`
-reads with no tag — excludes pre-releases, and `release.yml` marks every ruleset
-whose stability is not `stable` as a pre-release, deliberately, so that "a
-consumer or a downstream script never picks it up by accident". Both releases
-published so far are pre-releases. Run against `/latest` today:
-
-```text
-$ gh release view --repo libbusinessid/spec
-release not found
-```
-
-A synchronization built on it would have nothing to do for as long as the ruleset
-stays alpha, and would look perfectly healthy doing it.
-
-**What this engine does.** `.github/workflows/rules-sync.yml` lists
-`/repos/{owner}/{repo}/releases` and takes the newest non-draft entry by
-publication date, pre-release or not, and says why in a comment. The safety
-`release.yml` wants is real but it is not this repository's: a pre-release
-arrives here as a pull request that a human reads, not as a published artefact.
-
-**Proposed.** Say in 11.4 which release is meant while the ruleset is alpha —
-either "the newest published release, pre-releases included" or "the newest
-stable release, and nothing before the ruleset is stable".
-
-### the only writer of `PROVENANCE.md` postdates every release it has to describe
-
-**Measured.** Section 11.4 step 3 has the engine write `spec/PROVENANCE.md`, and
-`tools/write_provenance.sh` is its single writer since #84 — the change that
-fixed it having had two. Both published releases were cut before that change:
+**Measured**, at `70c408b`, the attested source commit of `v2026.08.38`.
+`engine.md` section 16 fixes the twelve `rules.lock` fields and says the list is
+normative because *un champ qu'un écrivain porte et qu'un autre omet est une
+release que les moteurs refusent* — naming `conformance_jsonl_sha256` as the
+field that already caused it. `tools/check_lock.sh`, which a synchronization runs
+from the attested commit against the lock it has just assembled, has seven
+`expect_sha` calls for eight `*_sha256` fields, and the one it skips is that one:
 
 ```text
-$ git ls-tree --name-only b264614 tools/ | grep provenance
-tools/check_provenance.sh
+$ sed -i 's/^conformance_jsonl_sha256 = ".*"/…= "0000…0000"/' rules.lock.bad
+$ tools/check_lock.sh rules.lock.bad ./artifacts 2026.08.38 ; echo exit=$?
+ok rules_sha256 … ok features_doc_sha256 … ok attestation identity …
+exit=0
+
+$ ./scripts/verify-lock.sh ; echo exit=$?
+MISMATCH spec/entid-conformance.jsonl  declared 0000…0000, actual 448b293e…
+exit=1
 ```
 
-`b264614` is the source commit of `v0.1.1`, read from its signing certificate. A
-downstream synchronization that pins the specification checkout to the attested
-commit — which is the only commit it has any reason to trust — finds no writer
-there, for `v0.1.0` and `v0.1.1` alike. Its inputs are all present and
-unchanged: `docs/spec/provenance/body.md`, `kotlin.md` and
-`docs/generated/coverage.md` are byte identical between `b264614` and the current
-default branch.
+It is the field that legitimately stays put while `conformance_sha256` moves —
+the JSONL is the reviewed source and carries no rules version, the compiled
+corpus injects one into every expected report — so it is exactly the value a
+writer gets wrong by carrying it forward, and exactly the one this gate cannot
+see.
 
-**What this engine does.** It pins the checkout to the attested commit, and takes
-`tools/write_provenance.sh` alone from the default branch when that commit
-predates it, warning and recording both commits in the pull request body. Every
-input the note quotes stays pinned to the release. Refusing instead would mean no
-note at all, and the run reproduces the committed `spec/PROVENANCE.md` byte for
-byte.
+**What this engine does.** `scripts/verify-lock.sh` verifies all eight, so the
+lock is caught here even when the upstream gate passes it. `v2026.08.38`'s lock
+is correct in all eight.
 
-**Proposed.** Nothing, if the next release fixes it by construction — any tag cut
-after #84 carries the writer. Worth a line in 11.4 saying the writer is taken
-from the release, so that no engine invents a second one.
+**Proposed**, and filed as [entid-org/spec#95][95]: add the eighth check, or
+assert that the set of `*_sha256` fields the lock declares is exactly the set the
+script checks, so the next field added to section 16 cannot be silently
+unverified either.
 
-### `PROVENANCE.md` tells the reader the lock says something it does not
-
-**Measured.** `docs/spec/provenance/body.md` ends with
-
-```text
-`rules.lock` carries no `attestation_identity` because no release exists yet;
-its header explains this.
-```
-
-Two releases exist, this repository synchronized from one, and its `rules.lock`
-carries `attestation_identity = "libbusinessid/spec/.github/workflows/release.yml@refs/tags/v0.1.1"`
-and no header at all. The sentence is already false in the committed tree, and it
-is the paragraph titled "Verifying integrity" — the one a reader consults to
-decide what to check.
-
-**What this engine does.** Nothing: it copies the note as assembled, because the
-alternative is a second writer. The two figures a test does check — rules version
-and source commit — are correct.
-
-**Proposed.** Make that paragraph describe both cases, or key it off whether the
-lock carries the field.
-
-### `tools/sync_engines.sh` overwrites an attested lock with a pre-release one
-
-**Measured.** In this checkout, `rules.lock` at `HEAD` names
-`source_commit = "b264614…"` and the attested identity of `v0.1.1`. A developer
-run of `tools/sync_engines.sh` left the working tree with the pre-release
-template instead: the header saying no release has been tagged yet,
-`attestation_identity` gone, and `source_commit` rewound to the specification's
-local `HEAD` — a commit no release was built from. `spec/PROVENANCE.md` followed
-it. Nothing warned; the digests still matched, so `verify-lock.sh` passes on
-either.
-
-**What this engine does.** It does not commit that regression, and its
-synchronization workflow rebuilds the lock from the attested manifest, so a later
-sync repairs it. But the lock also pins the conformance runner, and a lock that
-silently rewinds it makes the corpus judged by a comparator from another commit.
-
-**Proposed.** Have `sync_engines.sh` refuse, or at least warn, when the
-`rules.lock` it is about to replace carries an `attestation_identity`: after the
-first release it is downgrading a verified pin to an unverified one.
-
-### `engine.md` numbers two different sections 12.5
-
-**Measured.** At `2026.08.32` the document carries both
-
-```text
-### 12.5 Mutation testing
-## 12.5 Une seule commande, silencieuse quand tout passe
-```
-
-They are different sections at different depths, and the second was added by the
-change that introduced the single entry point. A citation of "section 12.5" is
-now ambiguous, and this repository has to make one: `CLAUDE.md` and `README.md`
-both point at 12.5 for the entry point, while `README.md` already pointed at 12.2
-for the coverage split from the same run of subsections.
-
-**What this engine does.** It reads 12.5 as the entry point section, because that
-is the one the sentence about `CLAUDE.md` belongs to, and cites mutation testing
-by name rather than by number where it needs to. Nothing depends on the number
-being right, so this is a documentation defect and not a behavioural question.
-
-**Proposed.** Renumber the new section, or renumber mutation testing — either
-way, one number per section.
-
-The three questions this engine raised against rules `2026.08.26` were all
-settled in `2026.08.31`; they are below, with what changed.
+[95]: https://github.com/entid-org/spec/issues/95
 
 ## Not a specification question, recorded because it shapes the build
 
@@ -198,6 +110,40 @@ runs the same tasks as its `ci.yml` counterpart. The scheduled workflow now also
 runs on pull requests that touch it or the benchmarks, so the next breakage of
 either is visible before it is merged rather than on a Monday.
 
+### `Toolchain 25` ran, passed, and measured nothing
+
+**Measured.** `ci.yml` carried a job named `Toolchain 25` and `scheduled.yml` a
+matrix of `17`, `21` and `25`, both setting `java-version` to the JDK under test.
+That moves the **Gradle daemon**. It does not move the compiler or the test JVM:
+`entid.kotlin-base` sets `jvmToolchain(17)`, which binds every `JavaCompile`
+and every `Test` to a launcher for the pinned JDK whatever the daemon is. Asked
+directly, with the daemon on the newest JDK installed here:
+
+```text
+$ JAVA_HOME=…/temurin-26.jdk/Contents/Home ./gradlew --info :entid:test …
+Starting process 'Gradle Test Executor 1'. Command: …/java/17.0.20-tem/bin/java
+```
+
+Four named runs across two workflows, one JDK ever exercised, and nothing could
+have failed to say so. The one thing those jobs did prove — that the build
+configures under a newer daemon — is not what either of them was named after, and
+is contradicted by the entry above: the analysers cannot run on such a daemon at
+all.
+
+**What this engine does.** `-Pentid.toolchain=N` moves the toolchain and
+leaves the daemon alone, which is the way round that matches what the range
+means: the library's bytecode targets 11 and has to load and behave on the far
+end, while detekt and ktlint have to run on the JDK they were built against.
+`scripts/verify.sh` runs the whole suite on the pinned JDK and the test suite
+again on the far end, so the entry point of section 12.6 covers the range and the
+`ci.yml` job is gone. The weekly matrix keeps all three, through the property.
+
+A run on another toolchain builds into `build/jdk<n>/`. Sharing the directory
+would have let `test` — which depends on `jar` — leave a jar compiled by a
+toolchain this project does not ship with where the packaging step reads one, and
+would have let the pinned run's own test results stand as evidence that the other
+step ran at all.
+
 ## Settled upstream
 
 ### 1. `engine.md` section 9.1 contradicted itself on an out of bounds access — clause removed
@@ -254,6 +200,87 @@ a branch nothing reads is answered by the new rule, with `program N node M is a
 when branch no choose reads`. Both are check 16, and
 `LoaderRefusalTest` asserts each message separately so the two rules cannot
 collapse into one.
+
+### 4. `tools/write_provenance.sh` now ships with the release it describes
+
+**Raised here.** Section 11.4 step 3 has the engine write `spec/PROVENANCE.md`,
+and `tools/write_provenance.sh` was its single writer since #84 — but both
+releases published at the time were cut before that change, so a synchronization
+that pins the specification checkout to the attested commit (the only commit it
+has any reason to trust) found no writer there. This engine took that one script
+from the default branch, warned, and recorded both commits in the pull request
+body.
+
+**Settled by construction.** `70c408b`, the attested source commit of
+`v2026.08.38`, carries `tools/write_provenance.sh`. The fallback did not fire in
+this synchronization and stays in the workflow for a re-run pinned to an older
+release. The script itself is now a `cp` of `provenance-<engine>.md` out of the
+release, which is the stronger form of the same fix: the note is assembled by the
+compiler, attested with everything else, and an engine no longer has to clone
+`spec` to write the last file of its sync.
+
+### 5. `PROVENANCE.md` no longer claims the lock says something it does not
+
+**Raised here.** The "Verifying integrity" paragraph ended with *`rules.lock`
+carries no `attestation_identity` because no release exists yet; its header
+explains this* — false in the committed tree of every engine that had
+synchronized from a release, and false in the paragraph a reader consults to
+decide what to check.
+
+**Settled upstream.** The paragraph now describes both cases and keys off whether
+the field is present: *`attestation_identity` names the workflow and tag that
+produced these files, and its presence is what distinguishes an attested release
+from a local build.* Which is what was proposed.
+
+### 6. `engine.md` no longer numbers two different sections 12.5
+
+**Raised here.** At `2026.08.32` the document carried both
+
+```text
+### 12.5 Mutation testing
+## 12.5 Une seule commande, silencieuse quand tout passe
+```
+
+at different depths, so a citation of "section 12.5" was ambiguous and this
+repository had to guess which one it meant.
+
+**Settled upstream.** The entry point is `### 12.6 Une seule commande,
+silencieuse quand tout passe`, at the same depth as its neighbours, and mutation
+testing keeps 12.5. Every citation in this repository was retargeted with this
+synchronization; `README.md` still cites 12.5 for mutation testing, which is now
+unambiguous.
+
+### 7. "the newest release" is no longer the endpoint that cannot see any release there is
+
+**Raised here**, and filed as [entid-org/spec#93][93]. Section 11.4 had the
+engine compare *la dernière release de `spec`* to its `rules.lock`. The endpoint
+that phrase names — `/releases/latest`, which is what `gh release view` reads
+with no tag — excludes pre-releases, and `release.yml` marks every ruleset that
+is not `stable` as one. Every release published so far is a pre-release, so a
+synchronization built on that endpoint would have had nothing to do for the whole
+alpha phase, and would have looked perfectly healthy doing it.
+
+**Settled upstream.** Section 11.4 now carries a paragraph of its own: *La plus
+récente, pas « latest »* — the workflow lists the releases and takes the newest
+that is not a draft, pre-release or not. Which is what this engine's
+`rules-sync.yml` already did, and now it does it because the specification says
+so rather than in spite of it.
+
+[93]: https://github.com/entid-org/spec/issues/93
+
+### 8. `tools/sync_engines.sh` refuses to overwrite an attested lock
+
+**Raised here, after it happened to this checkout.** A developer run left the
+working tree with a pre-release lock: `attestation_identity` gone and
+`source_commit` rewound to a commit no release was built from — which is also
+what pins the conformance runner, so the corpus would have been judged by a
+comparator from another commit. Nothing warned, and the digests still matched, so
+`verify-lock.sh` passed on either.
+
+**Settled upstream**, as proposed. The script now refuses when the `rules.lock`
+it is about to replace carries an `attestation_identity`, and `--force-local`
+is what steps off the attested path on purpose, with a warning. The reason is
+written beside the check, crediting the measurement.
 
 ## Settled upstream, earlier
 

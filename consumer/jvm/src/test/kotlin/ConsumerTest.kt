@@ -1,13 +1,13 @@
-// Copyright The LibBusinessID Authors.
+// Copyright The EntID Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-package io.libbusinessid.consumer
+package org.entid.consumer
 
-import io.libbusinessid.BusinessIdEngine
-import io.libbusinessid.IdentifierInput
-import io.libbusinessid.IdentifierKind
-import io.libbusinessid.ReasonCode
-import io.libbusinessid.StepStatus
+import org.entid.EntIdEngine
+import org.entid.IdentifierInput
+import org.entid.IdentifierKind
+import org.entid.ReasonCode
+import org.entid.StepStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
  * Every value is synthetic and comes from the shared conformance corpus.
  */
 class ConsumerTest {
-    private val engine = BusinessIdEngine.default()
+    private val engine = EntIdEngine.default()
 
     @Test
     fun `it validates from a consumer project`() {
@@ -38,7 +38,7 @@ class ConsumerTest {
 
     @Test
     fun `the ruleset version is the one the engine was built from`() {
-        assertEquals(System.getProperty("businessid.rules.version"), engine.rulesInfo().rulesVersion)
+        assertEquals(System.getProperty("entid.rules.version"), engine.rulesInfo().rulesVersion)
         assertEquals(StepStatus.VALID, engine.validate(IdentifierInput.of("lei", "00000000000000000098")).format.status)
     }
 

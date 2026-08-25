@@ -8,9 +8,100 @@ independently.
 
 ## [Unreleased]
 
+### Changed
+
+- **Rules `2026.08.38`**, synchronized from `entid-org/spec` `v2026.08.38`,
+  source commit `70c408b`, read from the signing certificate rather than from
+  the manifest. 94 identifier definitions, 37 kinds, 250 programs, 2386 IR
+  nodes, 676 conformance cases, all matched. Every artefact's SHA-256 checked
+  against `SHA256SUMS`, then every subject verified against
+  `entid-org/spec/.github/workflows/release.yml@refs/tags/v2026.08.38`, then the
+  lock rebuilt from the manifest and re-derived from the artefacts by `spec`'s
+  own `tools/check_lock.sh` at that commit. The twelve `rules.lock` fields are
+  the normative list of `engine.md` section 16, with `attestation_identity`
+  thirteenth.
+- The Protobuf package moved with the ruleset: `libbusinessid.ir.v1` becomes
+  `entid.ir.v1`, and `conformance` and `testee` with it. So did the module path
+  of the conformance runner, now `github.com/entid-org/spec` — that one could
+  not move with the rename, because `go run` compares the path it is given
+  against the one `go.mod` declares at the requested commit, and the previously
+  pinned commit predates the organisation's rename.
+- The synchronization workflow writes the prose contracts too — `spec/spec.md`,
+  `spec/engine.md` and `spec/engine-kotlin.md` — which `engine.md` section 11.4
+  step 3 now names outright and the release attests alongside the schemas. They
+  were skipped on the reasoning that no digest pins them, which meant nothing
+  ever wrote them: three documents naming a renamed organisation sat in the tree
+  until a human noticed.
+- The synchronization workflow publishes the section 12.6 verdict as a commit
+  status named `Verify`, the name the branch protection requires. A pull request
+  opened with a repository's own `GITHUB_TOKEN` starts no `pull_request`
+  workflow, so `ci.yml` never runs on a synchronization pull request and the
+  required check would wait for ever. This engine raised that in #10 and left it
+  to be decided; section 11.4 decided it, and the workflow now needs
+  `statuses: write` and nothing wider.
+- Entry point citations moved from `engine.md` section 12.5 to **12.6**, which
+  is where the single command now lives. Mutation testing keeps 12.5. The
+  ambiguity this repository reported is resolved upstream.
+- `SPEC-ISSUES.md` keeps one open question, and it is new: `tools/check_lock.sh`
+  verifies seven of the eight digests `rules.lock` declares, skipping
+  `conformance_jsonl_sha256` — the field section 16 names as the one that has
+  already caused engines to disagree about a release. Measured, reproduced, and
+  filed as [entid-org/spec#95](https://github.com/entid-org/spec/issues/95).
+  This engine's own `verify-lock.sh` verifies all eight, so nothing is at risk
+  here. Five earlier entries move to settled upstream, including the two that
+  were still open: `/releases/latest` cannot see a pre-release (11.4 now says
+  *la plus récente, pas « latest »*) and `tools/sync_engines.sh` overwriting an
+  attested lock (it refuses now, and `--force-local` is the deliberate way past).
+- `LoaderFixtureTest` no longer remembers at which byte the two check 16
+  fixtures differ. It asserted offset 513; this resync moved the fixtures and it
+  failed for a reason that had nothing to do with what it checks. It now asserts
+  the property — exactly one differing byte, and it is the `root_node` of
+  program 3 — against the decoded fixtures.
+
+- **The project is called EntID.** `businessid` becomes `entid` and the GitHub
+  organisation `libbusinessid` becomes `entid-org`, everywhere: the Gradle
+  module and the artifactId (`entid`), the Kotlin package (`io.libbusinessid` →
+  `org.entid`, so the sources move to `src/main/kotlin/org/entid/`), the engine
+  class (`BusinessIdEngine` → `EntIdEngine`, the name `engine-kotlin.md` gives
+  it), the convention plugin (`entid.kotlin-base`), every Gradle and system
+  property (`-Pentid.toolchain`, `entid.spec.dir`, …), the testee binary
+  (`entid-testee`), the pinned artefacts under `spec/` (`entid-rules.binpb`,
+  `entid-conformance.binpb`), the workflows, and the copyright header. The brand
+  is **EntID**; nothing becomes `LibEntID`, which is nobody's name.
+
+  Two names were not this repository's to move, and waited for the
+  synchronization below: the Protobuf package, declared by the `spec/*.proto`
+  that `rules.lock` pins, and the module path of the conformance runner, which
+  `go run` compares against the one `go.mod` declares *at the requested commit*.
+
 ### Added
 
-- The first Kotlin engine: a generator that reads `businessid-rules.binpb`, runs
+- A release workflow. Maven Central is the only way this engine reaches a
+  consumer, and there was none: `ci.yml` published a dry run into a local
+  directory and nothing went further. A tag `vx.y.z` now checks that the tag,
+  `EngineVersion.VALUE` and the changelog agree, runs the whole CI suite at that
+  commit, and uploads a signed bundle to the Central Portal as a `USER_MANAGED`
+  deployment, which stops at `VALIDATED` and waits for a person. Section 11.4
+  asks for the tag and the publication to stay manual, and both do.
+- The upload is `curl` against the Portal's publisher API, not JReleaser and not
+  a community Gradle plugin. Sonatype ships no plugin for the Portal and does not
+  support the community ones, so this is a choice rather than a default, and it
+  is a supply chain one: whatever does the upload runs with a PGP private key and
+  a publishing token in its environment. JReleaser is a release orchestrator
+  whose transitive closure — changelogs, Homebrew, Docker, a dozen announcement
+  services — would all sit in that process for the sake of one HTTP POST, and a
+  Gradle plugin would sit on the build script classpath of *every* build here,
+  not only of a release. The API is four documented endpoints.
+- `scripts/release-bundle.sh` builds that bundle and refuses to hand over one the
+  Portal would reject: a missing signature, an `.asc` that is not one, the
+  `maven-metadata.xml` Gradle writes for a repository rather than for a
+  deployment, a snapshot version, a POM without a field Central requires. Each of
+  those was watched failing. CI runs the script on every pull request with a
+  throwaway key it generates and discards, so the script a tag depends on is
+  never running for the first time — which is the shape of defect the first
+  specification release produced seven times out of nine.
+
+- The first Kotlin engine: a generator that reads `entid-rules.binpb`, runs
   the twenty-five load checks of `ir.md` section 10 and emits Kotlin; the
   emitted rules; the primitives they call; and the public API.
 - Support for all eighteen frozen capability identifiers and all sixty-three IR
@@ -21,13 +112,13 @@ independently.
   and answers the same whatever the order of requests.
 - Maven publication with sources, Dokka documentation, a POM, checksums and
   optional signing.
-- `./scripts/verify.sh`, the single entry point `engine.md` section 12.5
+- `./scripts/verify.sh`, the single entry point `engine.md` section 12.6
   requires: lock digests, regeneration of the emitted sources, compilation,
   tests, the shared conformance suite against the runner from `spec`, lint,
   format, coverage and its thresholds, and packaging including both consumer
   projects. One line on success, the failing step's output and only that on
   failure, non-zero the moment a step fails. It is what CI runs, so "green" has
-  one definition. `CLAUDE.md` carries the rule, as section 12.5 asks.
+  one definition. `CLAUDE.md` carries the rule, as section 12.6 asks.
 - The command refuses to believe an exit code of zero. Every step that owns a
   verdict is forced to execute, and afterwards must show evidence newer than the
   run; a step that was skipped or replayed fails the whole command. A step that
@@ -61,6 +152,19 @@ independently.
 
 ### Fixed
 
+- `Toolchain 25` never ran anything on JDK 25. The job set `java-version: 25`,
+  which moves the Gradle daemon, while `jvmToolchain(17)` kept compilation and
+  the tests on 17 whatever the daemon was — measured by asking a daemon on JDK 26
+  what it launched the test executor with, and being told 17. The weekly matrix of
+  `17`, `21` and `25` carried the same defect and exercised one JDK three times.
+  Both now move the *toolchain*, through `-Pentid.toolchain`, and leave the
+  daemon on the JDK detekt and ktlint need.
+- A release build could have produced an unsigned artefact. `signing` was required
+  only when `SIGNING_KEY` happened to be set, so a missing secret would have made
+  Gradle skip the task and left the Central Portal to notice, after the tag was
+  pushed. It is now required whenever the version is not a snapshot, and a release
+  without a key fails at the signing task by name.
+
 - Building the entry point found three ways a partial command reports a verdict
   it never computed. `--rerun` is a task option that binds to the task it
   follows, so `a b c --rerun` forces `c` alone; it does not reach a lifecycle
@@ -91,6 +195,33 @@ independently.
   benchmarks.
 
 ### Changed
+
+- The published groupId is `org.entid`, verified on the Central Portal against
+  the domain `entid.org` by a DNS TXT record. An earlier draft of this work
+  published `io.github.libbusinessid`, which cannot be verified at all: the
+  Portal verifies an `io.github.<account>` namespace by a public repository
+  under that GitHub account, and after the rename no such account exists —
+  `gh api users/libbusinessid` and `gh api orgs/libbusinessid` both answer 404,
+  and the freed name is available to a third party. A groupId cannot be changed
+  after a first publication without breaking every consumer, so the objection
+  was raised before the first tag rather than after it. `PackagingTest` freezes
+  the coordinate and `ReadmeTest` holds the install snippets to it.
+- `./scripts/verify.sh` now covers the far end of the supported JDK range and the
+  resolution of every declared dependency, and prints both ends of the range in
+  its one line. Section 11.4 asks for the entry point to be the only required
+  check, because a synchronization pull request publishes exactly that one status
+  — so everything outside it could merge unseen, and the JDK matrix and the
+  dependency audit were outside it. `Toolchain 25` and `Dependency audit` are gone
+  from `ci.yml`. A run on the other toolchain builds into `build/jdk<n>/`, so it
+  never overwrites what the pinned one produced: `test` depends on `jar`, and a
+  shared directory would have left a jar built by a compiler this project does not
+  ship with where the next step would read it.
+- The random fuzzing search stays outside `verify.sh`, deliberately. `test`
+  already runs every Jazzer target over its committed seed corpus, which is a
+  verdict and is reproducible; the ten seconds of random search on top are a
+  search, and a search that fails on a different commit each time turns the one
+  command everyone runs into one they learn to re-run. `ci.yml` keeps it in a job
+  of its own.
 
 - Compiled against rules `2026.08.32`. The version moves backwards on purpose:
   `PATCH` in `YYYY.MM.PATCH` is a counter within a month with no upper bound, and
