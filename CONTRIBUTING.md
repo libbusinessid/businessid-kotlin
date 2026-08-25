@@ -97,10 +97,24 @@ workflow fails on the tag rather than publishing half of anything.
 
 **Verify the namespace.** The published groupId is `io.github.libbusinessid` —
 the Maven coordinates, not the Kotlin package namespace, which stays
-`io.libbusinessid`. The Central Portal verifies `io.github.<account>` by asking
-you to prove you control that GitHub account or organisation, which for
-`libbusinessid` means an owner of the organisation doing it at
+`io.libbusinessid`. The Central Portal verifies `io.github.<account>` by having
+you create a public repository under that GitHub account, at
 <https://central.sonatype.com/publishing/namespaces>.
+
+> **This one is not settled, and has to be before the first tag.** There is no
+> GitHub account named `libbusinessid` any more: the organisation was renamed to
+> `entid-org` on 2026-08-18, and the old URLs work only as redirects.
+> `gh api users/libbusinessid` and `gh api orgs/libbusinessid` both answer 404.
+> A namespace cannot be verified against an account that does not exist, and the
+> name is now free for anyone else to register — so `io.github.libbusinessid`
+> cannot be verified as written and should not be published even if it could be.
+>
+> The verifiable alternatives are `io.github.entid-org`, a GitHub account this
+> project actually holds, or a domain it owns and can prove by DNS. Choosing
+> costs one line in `gradle.properties` and one in `PackagingTest` **today**, and
+> costs every consumer a rewrite after the first publication. This engine does
+> not choose it alone: the four engines share a name, and the rename is visibly
+> still in flight — everything in this repository is still called `businessid`.
 
 **Create four repository secrets**, and only these four:
 
