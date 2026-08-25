@@ -4,7 +4,7 @@
 package org.entid.generator
 
 import com.google.protobuf.ByteString
-import libbusinessid.ir.v1.Rules
+import entid.ir.v1.Rules
 
 /**
  * A ruleset that uses every one of the sixty-three operations.

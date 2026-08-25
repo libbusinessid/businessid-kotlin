@@ -24,7 +24,7 @@ class DescriptorTableTest {
         }
         DescriptorProtos.FileDescriptorSet.parseFrom(File(path).readBytes())
             .fileList
-            .filter { it.getPackage() == "libbusinessid.ir.v1" }
+            .filter { it.getPackage() == "entid.ir.v1" }
             .flatMap { it.messageTypeList }
             .associateBy { it.name }
     }

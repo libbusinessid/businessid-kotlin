@@ -69,6 +69,7 @@ jobs:
     permissions:
       contents: write # push the synchronization branch
       pull-requests: write # open it, and ask for auto-merge
+      statuses: write # publish the section 12.6 verdict under the name the protection requires
     steps:
       - name: Check out the engine
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -221,7 +222,8 @@ jobs:
             "entid-conformance-${VERSION}.binpb" \
             "entid-conformance-${VERSION}.jsonl.gz" \
             "entid-manifest-${VERSION}.json" \
-            rules.proto conformance.proto testee.proto ir.md features.md SHA256SUMS; do
+            rules.proto conformance.proto testee.proto ir.md features.md \
+            spec.md engine.md engine-kotlin.md SHA256SUMS; do
             gh attestation verify "$artefact" "${identity[@]}" --source-digest "$commit"
           done
 
@@ -341,12 +343,17 @@ jobs:
           done
           cp "${RUNNER_TEMP}/rules.lock" rules.lock
 
-          # spec/spec.md, spec/engine.md and spec/engine-kotlin.md are left
-          # alone. They are prose this engine is written against, they are not
-          # release artefacts, and no digest in rules.lock pins them — so they
-          # track the specification's default branch and not the commit a release
-          # was cut from. Rewinding them to the attested commit would delete
-          # sections written after it, including the one this workflow implements.
+          # And the prose contracts, which section 11.4 step 3 names outright:
+          # `spec.md`, `engine.md` and this engine's `engine-<language>.md`. They
+          # were left alone here once, on the reasoning that no digest in
+          # rules.lock pins them, so they tracked the specification's default
+          # branch instead — which meant nothing ever wrote them, and three
+          # documents naming a renamed organisation sat in the tree until a human
+          # noticed. They are published and attested with the schemas, so they
+          # move with the release like everything else.
+          for contract in spec.md engine.md engine-kotlin.md; do
+            cp "$a/$contract" "spec/$contract"
+          done
 
       - name: Write spec/PROVENANCE.md
         if: env.PROCEED == 'true'
@@ -391,7 +398,7 @@ jobs:
         # bundle that changed under it.
         run: ./gradlew --console=plain generateEngine --rerun
 
-      # -- 5. the entry point of section 12.5 ---------------------------------
+      # -- 5. the entry point of section 12.6 ---------------------------------
 
       - name: Verify
         id: verify
@@ -490,7 +497,50 @@ jobs:
             fi
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           printf 'Pull request: %s\n' "$url" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # -- 7. the verdict, as a commit status ---------------------------------
+
+      - name: Publish the verification verdict as a commit status
+        if: steps.pr.outputs.sha != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.pr.outputs.sha }}
+          VERIFY: ${{ steps.verify.outcome }}
+        run: |
+          set -euo pipefail
+          # Section 11.4: the workflow publishes the verdict itself.
+          #
+          # A pull request opened with a repository's own `GITHUB_TOKEN` triggers
+          # no `pull_request` workflow — GitHub cuts there so an action cannot
+          # call itself in a loop. The branch protection on `main` requires
+          # `Verify`, `ci.yml` is the only thing that publishes `Verify`, and
+          # `ci.yml` never starts on a pull request this workflow opened: the
+          # check would stay *Expected — Waiting for status to be reported* and
+          # auto-merge would never fire. This engine raised it in #10 and left it
+          # to be decided rather than working around it; section 11.4 decided it,
+          # and this step is the decision.
+          #
+          # The entry point has already run, above, on exactly this tree. What is
+          # missing is not the verdict but its name, so this publishes the result
+          # under the name the protection asks for. A repository writes its own
+          # commit statuses, so this needs `statuses: write` and no wider token —
+          # which is the property section 11.4 bought and will not spend.
+          if [ "${VERIFY}" = "success" ]; then
+            state=success
+            description="$(tail -1 "${RUNNER_TEMP}/verify.log" | cut -c1-140)"
+          else
+            state=failure
+            description='./scripts/verify.sh failed; the pull request carries the output'
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            -f state="$state" \
+            -f context='Verify' \
+            -f description="$description" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            >/dev/null
+          printf 'Commit status `Verify` = %s on %s\n' "$state" "$SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Ask for auto-merge
         if: steps.pr.outputs.url != '' && steps.verify.outcome == 'success'
@@ -501,18 +551,21 @@ jobs:
           set -euo pipefail
           # Only on a green verification. Auto-merge merges when nothing
           # *blocks*, which is not the same as on green: without a branch
-          # protection requiring the section 12.5 entry point, a pull request
+          # protection requiring the section 12.6 entry point, a pull request
           # with no checks at all counts as unblocked. This condition is the
           # guard this workflow owns; the branch protection is the one the
-          # repository owes, and README.md names both.
+          # repository owes, and README.md names both. The step above is what
+          # makes the protection satisfiable at all.
           if ! gh pr merge "$URL" --auto --squash; then
             echo "::warning::auto-merge could not be enabled on ${URL}"
             {
               echo 'Auto-merge could not be enabled. It needs both of:'
               echo ''
               echo '- Settings → General → Pull Requests → **Allow auto-merge**;'
-              echo '- Settings → Branches → a protection on the default branch requiring the CI'
-              echo '  job that runs `./scripts/verify.sh`, and requiring nothing else.'
+              echo '- Settings → Branches → a protection on the default branch requiring'
+              echo '  `Verify`, and requiring nothing else. Section 11.4: the entry point is'
+              echo '  the only required check, or "green" has two definitions and auto-merge'
+              echo '  follows the weaker one.'
               echo ''
               echo 'The pull request is open and green; it merges by hand until then.'
             } | tee -a "$GITHUB_STEP_SUMMARY"

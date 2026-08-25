@@ -10,6 +10,44 @@ independently.
 
 ### Changed
 
+- **Rules `2026.08.38`**, synchronized from `entid-org/spec` `v2026.08.38`,
+  source commit `70c408b`, read from the signing certificate rather than from
+  the manifest. 94 identifier definitions, 37 kinds, 250 programs, 2386 IR
+  nodes, 676 conformance cases, all matched. Every artefact's SHA-256 checked
+  against `SHA256SUMS`, then every subject verified against
+  `entid-org/spec/.github/workflows/release.yml@refs/tags/v2026.08.38`, then the
+  lock rebuilt from the manifest and re-derived from the artefacts by `spec`'s
+  own `tools/check_lock.sh` at that commit. The twelve `rules.lock` fields are
+  the normative list of `engine.md` section 16, with `attestation_identity`
+  thirteenth.
+- The Protobuf package moved with the ruleset: `libbusinessid.ir.v1` becomes
+  `entid.ir.v1`, and `conformance` and `testee` with it. So did the module path
+  of the conformance runner, now `github.com/entid-org/spec` — that one could
+  not move with the rename, because `go run` compares the path it is given
+  against the one `go.mod` declares at the requested commit, and the previously
+  pinned commit predates the organisation's rename.
+- The synchronization workflow writes the prose contracts too — `spec/spec.md`,
+  `spec/engine.md` and `spec/engine-kotlin.md` — which `engine.md` section 11.4
+  step 3 now names outright and the release attests alongside the schemas. They
+  were skipped on the reasoning that no digest pins them, which meant nothing
+  ever wrote them: three documents naming a renamed organisation sat in the tree
+  until a human noticed.
+- The synchronization workflow publishes the section 12.6 verdict as a commit
+  status named `Verify`, the name the branch protection requires. A pull request
+  opened with a repository's own `GITHUB_TOKEN` starts no `pull_request`
+  workflow, so `ci.yml` never runs on a synchronization pull request and the
+  required check would wait for ever. This engine raised that in #10 and left it
+  to be decided; section 11.4 decided it, and the workflow now needs
+  `statuses: write` and nothing wider.
+- Entry point citations moved from `engine.md` section 12.5 to **12.6**, which
+  is where the single command now lives. Mutation testing keeps 12.5. The
+  ambiguity this repository reported is resolved upstream.
+- `LoaderFixtureTest` no longer remembers at which byte the two check 16
+  fixtures differ. It asserted offset 513; this resync moved the fixtures and it
+  failed for a reason that had nothing to do with what it checks. It now asserts
+  the property — exactly one differing byte, and it is the `root_node` of
+  program 3 — against the decoded fixtures.
+
 - **The project is called EntID.** `businessid` becomes `entid` and the GitHub
   organisation `libbusinessid` becomes `entid-org`, everywhere: the Gradle
   module and the artifactId (`entid`), the Kotlin package (`io.libbusinessid` →
@@ -21,13 +59,10 @@ independently.
   `entid-conformance.binpb`), the workflows, and the copyright header. The brand
   is **EntID**; nothing becomes `LibEntID`, which is nobody's name.
 
-  Two names deliberately did **not** move with it. The Protobuf package is still
-  `libbusinessid.ir.v1`, because it belongs to `spec` and to the ruleset this
-  commit pins, not to this repository. And the conformance runner is still
-  fetched from `github.com/libbusinessid/spec`, because `go run` compares the
-  path it is given against the one `go.mod` *declares at that commit*, and the
-  pinned commit predates the rename. Both move with the next synchronization,
-  which is where they are `spec`'s to move.
+  Two names were not this repository's to move, and waited for the
+  synchronization below: the Protobuf package, declared by the `spec/*.proto`
+  that `rules.lock` pins, and the module path of the conformance runner, which
+  `go run` compares against the one `go.mod` declares *at the requested commit*.
 
 ### Added
 
@@ -67,13 +102,13 @@ independently.
   and answers the same whatever the order of requests.
 - Maven publication with sources, Dokka documentation, a POM, checksums and
   optional signing.
-- `./scripts/verify.sh`, the single entry point `engine.md` section 12.5
+- `./scripts/verify.sh`, the single entry point `engine.md` section 12.6
   requires: lock digests, regeneration of the emitted sources, compilation,
   tests, the shared conformance suite against the runner from `spec`, lint,
   format, coverage and its thresholds, and packaging including both consumer
   projects. One line on success, the failing step's output and only that on
   failure, non-zero the moment a step fails. It is what CI runs, so "green" has
-  one definition. `CLAUDE.md` carries the rule, as section 12.5 asks.
+  one definition. `CLAUDE.md` carries the rule, as section 12.6 asks.
 - The command refuses to believe an exit code of zero. Every step that owns a
   verdict is forced to execute, and afterwards must show evidence newer than the
   run; a step that was skipped or replayed fails the whole command. A step that

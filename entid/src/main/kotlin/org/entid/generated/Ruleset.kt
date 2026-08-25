@@ -1,4 +1,4 @@
-// Generated from entid-rules.binpb 2026.08.33. Do not edit by hand:
+// Generated from entid-rules.binpb 2026.08.38. Do not edit by hand:
 // run `./gradlew generateEngine`. `./gradlew checkGenerated` fails when this
 // file and the pinned bundle disagree.
 //
@@ -221,9 +221,9 @@ internal fun prependCountryIfMissing(target: Int, b: CanonBuffer) {
 
 /** The compiled ruleset: metadata and every table the pipeline reads. */
 internal object Ruleset {
-    const val RULES_VERSION: String = "2026.08.33"
+    const val RULES_VERSION: String = "2026.08.38"
     const val FORMAT_VERSION: Int = 1
-    const val SOURCE_DIGEST: String = "68de82e8f0fa7557f232566b7ef14b504e0ab80637a0cfbc0e598295357aa998"
+    const val SOURCE_DIGEST: String = "49acb4b4c1fd98930e84f8631bd0ff752dd456308e5de01fd43caa8574024307"
 
     /** Every frozen capability this engine implements. */
     val CAPABILITIES: List<Capability> = listOf(

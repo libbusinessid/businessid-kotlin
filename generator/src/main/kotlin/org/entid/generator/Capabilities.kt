@@ -3,13 +3,13 @@
 
 package org.entid.generator
 
-import libbusinessid.ir.v1.Rules.AssertionOpKind
-import libbusinessid.ir.v1.Rules.CallOpKind
-import libbusinessid.ir.v1.Rules.CanonicalizationOpKind
-import libbusinessid.ir.v1.Rules.ChecksumOpKind
-import libbusinessid.ir.v1.Rules.IntegerOpKind
-import libbusinessid.ir.v1.Rules.PredicateOpKind
-import libbusinessid.ir.v1.Rules.StringOpKind
+import entid.ir.v1.Rules.AssertionOpKind
+import entid.ir.v1.Rules.CallOpKind
+import entid.ir.v1.Rules.CanonicalizationOpKind
+import entid.ir.v1.Rules.ChecksumOpKind
+import entid.ir.v1.Rules.IntegerOpKind
+import entid.ir.v1.Rules.PredicateOpKind
+import entid.ir.v1.Rules.StringOpKind
 
 /**
  * The frozen capability registry of `features.md`.

@@ -3,7 +3,7 @@
 
 package org.entid.generator
 
-import libbusinessid.ir.v1.Rules
+import entid.ir.v1.Rules
 
 /**
  * A minimal ruleset that passes all twenty-five checks, and the machinery to

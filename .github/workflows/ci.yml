@@ -67,7 +67,7 @@ jobs:
         with:
           go-version: stable
 
-      # The entry point of engine.md section 12.5, and the same command a
+      # The entry point of engine.md section 12.6, and the same command a
       # developer runs. One line when it passes; the failing step and only that
       # when it does not. There is no second definition of green here.
       - name: Verify

@@ -4,7 +4,7 @@
 package org.entid.generator
 
 import com.google.protobuf.ByteString
-import libbusinessid.ir.v1.Rules
+import entid.ir.v1.Rules
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith

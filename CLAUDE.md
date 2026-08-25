@@ -6,7 +6,7 @@
 ./scripts/verify.sh
 ```
 
-That is the entry point `engine.md` section 12.5 requires, and it is what CI
+That is the entry point `engine.md` section 12.6 requires, and it is what CI
 calls, so "green" never has two definitions. It runs the lock digests, the
 regeneration of the emitted sources, compilation, tests, the shared conformance
 suite against the runner from `spec`, lint, format, coverage and its thresholds,

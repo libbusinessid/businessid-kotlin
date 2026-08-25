@@ -66,13 +66,17 @@
 # What has never run
 # ---------------------------------------------------------------------------
 #
-# At the time of writing, the `org.entid` namespace is not verified
-# on the Portal and none of the four secrets exists. Everything up to and
-# including `scripts/release-bundle.sh` has been run — CI rehearses it on every
-# pull request with a throwaway key. The two steps below that speak to the Portal
-# have not, and cannot be until a human does the two things `CONTRIBUTING.md`
-# describes. They are written to fail on a missing id, a non-2xx response, an
-# unexpected state and a timeout, rather than to look successful.
+# The `org.entid` namespace is verified on the Portal, against the domain
+# `entid.org` by a DNS TXT record. The four secrets do not exist yet, and a
+# workflow cannot create them: `CONTRIBUTING.md` says where each comes from, and
+# the first step below names every one that is missing before the checkout.
+#
+# Everything up to and including `scripts/release-bundle.sh` has been run — CI
+# rehearses it on every pull request with a throwaway key it generates and
+# discards. The two steps that speak to the Portal have not, and cannot be until
+# the secrets exist. They are written to fail on a missing deployment id, a
+# non-2xx response, an unexpected state and a timeout, rather than to look
+# successful.
 
 name: Release
 

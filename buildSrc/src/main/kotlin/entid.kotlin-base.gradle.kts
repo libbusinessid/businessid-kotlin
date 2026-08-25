@@ -165,7 +165,7 @@ kover {
     reports {
         filters {
             excludes {
-                classes("libbusinessid.*")
+                classes("entid.*")
             }
         }
     }

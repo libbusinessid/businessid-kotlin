@@ -3,7 +3,7 @@
 
 package org.entid.generator
 
-import libbusinessid.ir.v1.Rules
+import entid.ir.v1.Rules
 
 /** How a program reads the values it does not receive as an operand. */
 internal class Scope(val value: String, val subject: String, val target: String, val profile: String)

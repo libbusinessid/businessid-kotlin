@@ -39,7 +39,7 @@ nowhere else:
 ```bash
 ./gradlew :testee:installDist
 GOTOOLCHAIN=auto go run \
-  "github.com/libbusinessid/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
+  "github.com/entid-org/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
   -corpus spec/entid-conformance.binpb \
   -- ./testee/build/install/entid-testee/bin/entid-testee
 ```

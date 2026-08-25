@@ -3,8 +3,8 @@
 
 package org.entid.testee
 
-import libbusinessid.conformance.v1.Conformance
-import libbusinessid.testee.v1.Testee
+import entid.conformance.v1.Conformance
+import entid.testee.v1.Testee
 import org.entid.EntIdEngine
 import org.entid.IdentifierInput
 import org.entid.IdentifierKind
@@ -118,8 +118,8 @@ internal object Answering {
     private fun status(wireName: String): Conformance.StepStatus =
         Conformance.StepStatus.valueOf("STEP_STATUS_" + wireName.uppercase())
 
-    private fun reason(wireName: String): libbusinessid.ir.v1.Rules.ReasonCode =
-        libbusinessid.ir.v1.Rules.ReasonCode.valueOf("REASON_CODE_" + wireName.uppercase())
+    private fun reason(wireName: String): entid.ir.v1.Rules.ReasonCode =
+        entid.ir.v1.Rules.ReasonCode.valueOf("REASON_CODE_" + wireName.uppercase())
 }
 
 /**

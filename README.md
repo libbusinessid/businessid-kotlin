@@ -10,7 +10,7 @@ code, the primitives it calls, and a hand-written API — no ruleset, no Protobu
 no decoder.
 
 ```text
-rules 2026.08.33, format version 1
+rules 2026.08.38, format version 1
 94 identifier definitions · 37 kinds · 250 programs · 2386 IR nodes
 conformance: 676 of 676 cases matched, 0 differed
 ```
@@ -291,7 +291,25 @@ token:
 | --- | --- | --- |
 | Allow GitHub Actions to create and approve pull requests | Settings → Actions → General → Workflow permissions | Without it `gh pr create` refuses and step 6 cannot run at all. |
 | Allow auto-merge | Settings → General → Pull Requests | Without it `gh pr merge --auto` refuses. |
-| A branch protection on `main` requiring the CI job that runs `./scripts/verify.sh`, and requiring nothing else | Settings → Branches | Auto-merge merges when nothing *blocks*, which is not the same as on green. A second required check would give "green" two definitions, and auto-merge follows the weaker one. The scheduled workflow and Dependabot must not be required checks. |
+| A branch protection on `main` requiring `Verify`, and requiring nothing else | Settings → Branches | Auto-merge merges when nothing *blocks*, which is not the same as on green. A second required check would give "green" two definitions, and auto-merge follows the weaker one — section 11.4 says so outright. The scheduled workflow and Dependabot must not be required checks. |
+
+All three are on today.
+
+**Who publishes `Verify` on a synchronization pull request.** Not `ci.yml`: a
+pull request opened with a repository's own `GITHUB_TOKEN` starts no
+`pull_request` workflow, because GitHub cuts there so an action cannot call
+itself in a loop. A protection requiring a check that never starts would leave
+every synchronization waiting for ever. The workflow has already run
+`./scripts/verify.sh` on exactly that tree, so it publishes the result as a
+commit status under the name the protection asks for. That needs `statuses:
+write`, which a repository has over itself — not a wider token, which is the
+whole point of section 11.4.
+
+**This is also why `Toolchain 25` is not a required check, and must not become
+one.** The far end of the JDK range is inside `./scripts/verify.sh`, so the one
+required status covers it. Requiring a second check would give "green" two
+definitions and, since only `Verify` is published on a synchronization pull
+request, would block every one of them for ever.
 
 Tagging and publishing stay manual. Nothing in this workflow releases anything.
 
@@ -327,7 +345,7 @@ testee and the tests that prove it does not cheat; it contains no comparator.
 ```bash
 ./gradlew :testee:installDist
 GOTOOLCHAIN=auto go run \
-  "github.com/libbusinessid/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
+  "github.com/entid-org/spec/cmd/conformance-runner@$(grep '^source_commit' rules.lock | cut -d'"' -f2)" \
   -corpus spec/entid-conformance.binpb \
   -- ./testee/build/install/entid-testee/bin/entid-testee
 ```
@@ -346,7 +364,7 @@ One command verifies everything, and it is the one CI runs:
 ```
 
 ```text
-verify ok — rules 2026.08.33 · conformance 676/676 · tests 568 · toolchains 17+25 · coverage 99.04%/93.07% · jar 143431 B
+verify ok — rules 2026.08.38 · conformance 676/676 · tests 560 · toolchains 17+25 · coverage 99.04%/93.07% · jar 141566 B
 ```
 
 It covers the lock digests, the regeneration of the emitted sources,
@@ -357,7 +375,7 @@ supported JDK range — the pinned toolchain throughout, and the far end compile
 and run again with `-Pentid.toolchain`. It prints that one line when
 everything passes, the failing step's
 output and only that when something does not, and exits non-zero either way it
-should. `engine.md` section 12.5 asks for it; `CLAUDE.md` says why it is worth
+should. `engine.md` section 12.6 asks for it; `CLAUDE.md` says why it is worth
 preferring to the pieces.
 
 The pieces are still there when a single one is what you want:

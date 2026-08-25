@@ -2,7 +2,7 @@
 # Copyright The EntID Authors.
 # SPDX-License-Identifier: Apache-2.0
 #
-# The single entry point of `engine.md` section 12.5.
+# The single entry point of `engine.md` section 12.6.
 #
 # Runs the whole verification — lock digests, regeneration of the emitted code,
 # compilation, tests, conformance against the runner from `spec`, lint, format,
@@ -149,15 +149,15 @@ step "dependency resolution" "${GRADLE[@]}" resolveAllDependencies
 # rules.lock records under source_commit — the same commit as the corpus, so it
 # is impossible to judge a corpus with another comparator.
 #
-# The module path is the one `go.mod` declares at *that commit*, not the one the
-# repository answers to today: `go run` compares the two and refuses a path the
-# module does not claim. The organisation was renamed to `entid-org`, so this
-# says `libbusinessid` for as long as rules.lock pins a commit from before the
-# rename, and moves with the next synchronization.
+# The module path has to be the one `go.mod` declares at *that commit*, not the
+# one the repository answers to today: `go run` compares the two and refuses a
+# path the module does not claim. That is why this line moved with the ruleset
+# and not with the rename — a commit from before the organisation became
+# `entid-org` still declares the old path, and asking for the new one fails.
 SOURCE_COMMIT="$(grep '^source_commit' rules.lock | cut -d'"' -f2)"
 step "conformance testee" "${GRADLE[@]}" :testee:installDist
 step "conformance" env GOTOOLCHAIN=auto go run \
-  "github.com/libbusinessid/spec/cmd/conformance-runner@$SOURCE_COMMIT" \
+  "github.com/entid-org/spec/cmd/conformance-runner@$SOURCE_COMMIT" \
   -corpus spec/entid-conformance.binpb \
   -- ./testee/build/install/entid-testee/bin/entid-testee
 

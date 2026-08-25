@@ -3,7 +3,7 @@
 
 package org.entid.generator
 
-import libbusinessid.ir.v1.Rules
+import entid.ir.v1.Rules
 
 /** One dispatch target, in the flat index space the emitted code uses. */
 internal class TargetRef(val index: Int, val dispatcherIndex: Int, val proto: Rules.DispatchTarget) {

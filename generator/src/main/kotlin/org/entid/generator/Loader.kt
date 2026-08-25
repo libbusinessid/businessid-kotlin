@@ -9,7 +9,7 @@
 package org.entid.generator
 
 import com.google.protobuf.InvalidProtocolBufferException
-import libbusinessid.ir.v1.Rules
+import entid.ir.v1.Rules
 import java.util.Locale
 
 /**

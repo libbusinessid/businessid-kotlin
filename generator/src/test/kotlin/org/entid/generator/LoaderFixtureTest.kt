@@ -3,6 +3,7 @@
 
 package org.entid.generator
 
+import entid.ir.v1.Rules
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -113,12 +114,18 @@ class LoaderFixtureTest {
      *
      * Decoded rather than taken from their descriptions: both carry the same
      * four node checksum program with a `WHEN` at index 3 that no node reads,
-     * and they differ only at offset 513 — the `root_node` varint, 3 against 1.
-     * `loader-stray-when-branch-022` therefore roots the program at the branch;
-     * `loader-when-unreferenced-038` roots it elsewhere and leaves the branch
-     * with no parent at all. Both are refused as `invalid_ruleset`, so the
-     * corpus alone cannot tell whether an engine has one rule or two. These
-     * assertions can.
+     * and they differ in exactly one byte — the `root_node` varint of program 3,
+     * 3 against 1. `loader-stray-when-branch-022` therefore roots the program at
+     * the branch; `loader-when-unreferenced-038` roots it elsewhere and leaves
+     * the branch with no parent at all. Both are refused as `invalid_ruleset`,
+     * so the corpus alone cannot tell whether an engine has one rule or two.
+     * These assertions can.
+     *
+     * Which byte it is, is not written down here. It was, and a resync moved the
+     * fixtures by twenty bytes and failed this test for a reason that had
+     * nothing to do with what it checks. The property is "one byte, and it is
+     * that field", and both halves are now asserted against the decoded
+     * fixtures rather than against a remembered offset.
      */
     @Test
     fun `the two check sixteen fixtures are refused by different rules`() {
@@ -131,7 +138,31 @@ class LoaderFixtureTest {
             .map { id -> SpecFiles.loaderCases.first { it.id == id }.rulesPayload.toByteArray() }
         assertEquals(payloads[0].size, payloads[1].size, "the two fixtures are the same length")
         val differing = payloads[0].indices.filter { payloads[0][it] != payloads[1][it] }
-        assertEquals(listOf(513), differing, "the two fixtures differ at one byte, the root_node varint")
+        assertEquals(1, differing.size, "the two fixtures differ in more than one byte: $differing")
+
+        // And that byte is the `root_node` of program 3. Everything else in both
+        // bundles is identical field by field, so the single difference above
+        // cannot be anything but this one.
+        val bundles = payloads.map { Rules.RuleBundle.parseFrom(it) }
+        assertEquals(
+            bundles[0].toBuilder().clearPrograms().build(),
+            bundles[1].toBuilder().clearPrograms().build(),
+            "the two fixtures differ outside their programs",
+        )
+        val programs = bundles.map { it.programsList.associateBy { program -> program.id } }
+        assertEquals(programs[0].keys, programs[1].keys, "the two fixtures declare different programs")
+        for (id in programs[0].keys) {
+            val a = programs[0].getValue(id)
+            val b = programs[1].getValue(id)
+            assertEquals(
+                a.toBuilder().setRootNode(0).build(),
+                b.toBuilder().setRootNode(0).build(),
+                "program $id differs somewhere other than its root_node",
+            )
+            if (id != 3) assertEquals(a.rootNode, b.rootNode, "program $id roots differently")
+        }
+        assertEquals(3, programs[0].getValue(3).rootNode, "022 no longer roots program 3 at the when branch")
+        assertEquals(1, programs[1].getValue(3).rootNode, "038 no longer roots program 3 away from the branch")
 
         val rooted = refusalOf("loader-stray-when-branch-022")
         assertEquals(16, rooted.check)

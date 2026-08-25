@@ -60,9 +60,9 @@ val stageProtoSchemas = tasks.register<Sync>("stageProtoSchemas") {
     description = "Places spec/*.proto under the package path protoc expects."
     val spec = rootProject.layout.projectDirectory.dir("spec")
     into(rootProject.layout.buildDirectory.dir("proto"))
-    from(spec.file("rules.proto")) { into("libbusinessid/ir/v1") }
-    from(spec.file("conformance.proto")) { into("libbusinessid/conformance/v1") }
-    from(spec.file("testee.proto")) { into("libbusinessid/testee/v1") }
+    from(spec.file("rules.proto")) { into("entid/ir/v1") }
+    from(spec.file("conformance.proto")) { into("entid/conformance/v1") }
+    from(spec.file("testee.proto")) { into("entid/testee/v1") }
 }
 
 tasks.named("generateProto") {

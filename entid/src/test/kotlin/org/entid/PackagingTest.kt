@@ -31,9 +31,9 @@ class PackagingTest {
     fun `the jar carries no Protobuf class`() {
         val protobuf = entries.filter {
             it.startsWith("com/google/protobuf/") ||
-                it.startsWith("libbusinessid/ir/") ||
-                it.startsWith("libbusinessid/conformance/") ||
-                it.startsWith("libbusinessid/testee/")
+                it.startsWith("entid/ir/") ||
+                it.startsWith("entid/conformance/") ||
+                it.startsWith("entid/testee/")
         }
         assertEquals(emptyList<String>(), protobuf, "Protobuf lives in the generator, never in the library")
     }

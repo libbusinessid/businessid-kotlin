@@ -3,7 +3,7 @@
 
 package org.entid.generator
 
-import libbusinessid.conformance.v1.Conformance
+import entid.conformance.v1.Conformance
 import java.io.File
 
 /** Access to the pinned artefacts under `spec/`, which are build inputs. */

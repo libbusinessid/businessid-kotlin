@@ -3,7 +3,7 @@
 
 package org.entid.generator
 
-import libbusinessid.ir.v1.Rules
+import entid.ir.v1.Rules
 
 /** The role a program plays, which constrains its shape. */
 internal enum class ProgramRole {

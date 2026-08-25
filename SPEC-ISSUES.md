@@ -37,62 +37,10 @@ arrives here as a pull request that a human reads, not as a published artefact.
 either "the newest published release, pre-releases included" or "the newest
 stable release, and nothing before the ruleset is stable".
 
-### the only writer of `PROVENANCE.md` postdates every release it has to describe
-
-**Measured.** Section 11.4 step 3 has the engine write `spec/PROVENANCE.md`, and
-`tools/write_provenance.sh` is its single writer since #84 — the change that
-fixed it having had two. Both published releases were cut before that change:
-
-```text
-$ git ls-tree --name-only b264614 tools/ | grep provenance
-tools/check_provenance.sh
-```
-
-`b264614` is the source commit of `v0.1.1`, read from its signing certificate. A
-downstream synchronization that pins the specification checkout to the attested
-commit — which is the only commit it has any reason to trust — finds no writer
-there, for `v0.1.0` and `v0.1.1` alike. Its inputs are all present and
-unchanged: `docs/spec/provenance/body.md`, `kotlin.md` and
-`docs/generated/coverage.md` are byte identical between `b264614` and the current
-default branch.
-
-**What this engine does.** It pins the checkout to the attested commit, and takes
-`tools/write_provenance.sh` alone from the default branch when that commit
-predates it, warning and recording both commits in the pull request body. Every
-input the note quotes stays pinned to the release. Refusing instead would mean no
-note at all, and the run reproduces the committed `spec/PROVENANCE.md` byte for
-byte.
-
-**Proposed.** Nothing, if the next release fixes it by construction — any tag cut
-after #84 carries the writer. Worth a line in 11.4 saying the writer is taken
-from the release, so that no engine invents a second one.
-
-### `PROVENANCE.md` tells the reader the lock says something it does not
-
-**Measured.** `docs/spec/provenance/body.md` ends with
-
-```text
-`rules.lock` carries no `attestation_identity` because no release exists yet;
-its header explains this.
-```
-
-Two releases exist, this repository synchronized from one, and its `rules.lock`
-carries `attestation_identity = "entid-org/spec/.github/workflows/release.yml@refs/tags/v0.1.1"`
-and no header at all. The sentence is already false in the committed tree, and it
-is the paragraph titled "Verifying integrity" — the one a reader consults to
-decide what to check.
-
-**What this engine does.** Nothing: it copies the note as assembled, because the
-alternative is a second writer. The two figures a test does check — rules version
-and source commit — are correct.
-
-**Proposed.** Make that paragraph describe both cases, or key it off whether the
-lock carries the field.
-
 ### `tools/sync_engines.sh` overwrites an attested lock with a pre-release one
 
-**Measured.** In this checkout, `rules.lock` at `HEAD` names
-`source_commit = "b264614…"` and the attested identity of `v0.1.1`. A developer
+**Measured**, against `v0.1.1`. `rules.lock` at `HEAD` named
+`source_commit = "b264614…"` and the attested identity of that tag. A developer
 run of `tools/sync_engines.sh` left the working tree with the pre-release
 template instead: the header saying no release has been tagged yet,
 `attestation_identity` gone, and `source_commit` rewound to the specification's
@@ -109,31 +57,8 @@ silently rewinds it makes the corpus judged by a comparator from another commit.
 `rules.lock` it is about to replace carries an `attestation_identity`: after the
 first release it is downgrading a verified pin to an unverified one.
 
-### `engine.md` numbers two different sections 12.5
-
-**Measured.** At `2026.08.32` the document carries both
-
-```text
-### 12.5 Mutation testing
-## 12.5 Une seule commande, silencieuse quand tout passe
-```
-
-They are different sections at different depths, and the second was added by the
-change that introduced the single entry point. A citation of "section 12.5" is
-now ambiguous, and this repository has to make one: `CLAUDE.md` and `README.md`
-both point at 12.5 for the entry point, while `README.md` already pointed at 12.2
-for the coverage split from the same run of subsections.
-
-**What this engine does.** It reads 12.5 as the entry point section, because that
-is the one the sentence about `CLAUDE.md` belongs to, and cites mutation testing
-by name rather than by number where it needs to. Nothing depends on the number
-being right, so this is a documentation defect and not a behavioural question.
-
-**Proposed.** Renumber the new section, or renumber mutation testing — either
-way, one number per section.
-
-The three questions this engine raised against rules `2026.08.26` were all
-settled in `2026.08.31`; they are below, with what changed.
+The questions this engine raised against earlier rulesets are below, with what
+changed.
 
 ## Not a specification question, recorded because it shapes the build
 
@@ -223,7 +148,7 @@ leaves the daemon alone, which is the way round that matches what the range
 means: the library's bytecode targets 11 and has to load and behave on the far
 end, while detekt and ktlint have to run on the JDK they were built against.
 `scripts/verify.sh` runs the whole suite on the pinned JDK and the test suite
-again on the far end, so the entry point of section 12.5 covers the range and the
+again on the far end, so the entry point of section 12.6 covers the range and the
 `ci.yml` job is gone. The weekly matrix keeps all three, through the property.
 
 A run on another toolchain builds into `build/jdk<n>/`. Sharing the directory
@@ -288,6 +213,55 @@ a branch nothing reads is answered by the new rule, with `program N node M is a
 when branch no choose reads`. Both are check 16, and
 `LoaderRefusalTest` asserts each message separately so the two rules cannot
 collapse into one.
+
+### 4. `tools/write_provenance.sh` now ships with the release it describes
+
+**Raised here.** Section 11.4 step 3 has the engine write `spec/PROVENANCE.md`,
+and `tools/write_provenance.sh` was its single writer since #84 — but both
+releases published at the time were cut before that change, so a synchronization
+that pins the specification checkout to the attested commit (the only commit it
+has any reason to trust) found no writer there. This engine took that one script
+from the default branch, warned, and recorded both commits in the pull request
+body.
+
+**Settled by construction.** `70c408b`, the attested source commit of
+`v2026.08.38`, carries `tools/write_provenance.sh`. The fallback did not fire in
+this synchronization and stays in the workflow for a re-run pinned to an older
+release. The script itself is now a `cp` of `provenance-<engine>.md` out of the
+release, which is the stronger form of the same fix: the note is assembled by the
+compiler, attested with everything else, and an engine no longer has to clone
+`spec` to write the last file of its sync.
+
+### 5. `PROVENANCE.md` no longer claims the lock says something it does not
+
+**Raised here.** The "Verifying integrity" paragraph ended with *`rules.lock`
+carries no `attestation_identity` because no release exists yet; its header
+explains this* — false in the committed tree of every engine that had
+synchronized from a release, and false in the paragraph a reader consults to
+decide what to check.
+
+**Settled upstream.** The paragraph now describes both cases and keys off whether
+the field is present: *`attestation_identity` names the workflow and tag that
+produced these files, and its presence is what distinguishes an attested release
+from a local build.* Which is what was proposed.
+
+### 6. `engine.md` no longer numbers two different sections 12.5
+
+**Raised here.** At `2026.08.32` the document carried both
+
+```text
+### 12.5 Mutation testing
+## 12.5 Une seule commande, silencieuse quand tout passe
+```
+
+at different depths, so a citation of "section 12.5" was ambiguous and this
+repository had to guess which one it meant.
+
+**Settled upstream.** The entry point is `### 12.6 Une seule commande,
+silencieuse quand tout passe`, at the same depth as its neighbours, and mutation
+testing keeps 12.5. Every citation in this repository was retargeted with this
+synchronization; `README.md` still cites 12.5 for mutation testing, which is now
+unambiguous.
 
 ## Settled upstream, earlier
 

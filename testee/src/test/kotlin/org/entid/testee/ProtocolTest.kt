@@ -3,9 +3,9 @@
 
 package org.entid.testee
 
-import libbusinessid.conformance.v1.Conformance
-import libbusinessid.ir.v1.Rules
-import libbusinessid.testee.v1.Testee
+import entid.conformance.v1.Conformance
+import entid.ir.v1.Rules
+import entid.testee.v1.Testee
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

@@ -103,7 +103,7 @@ class SourceConstraintsTest {
         // Protobuf type or read a ruleset.
         assertEquals(
             emptyList<String>(),
-            findings(sources, Regex("""com\.google\.protobuf|libbusinessid\.ir\.v1""")),
+            findings(sources, Regex("""com\.google\.protobuf|entid\.ir\.v1""")),
         )
         assertEquals(
             emptyList<String>(),

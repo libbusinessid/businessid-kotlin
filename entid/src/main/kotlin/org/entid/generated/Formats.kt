@@ -1,4 +1,4 @@
-// Generated from entid-rules.binpb 2026.08.33. Do not edit by hand:
+// Generated from entid-rules.binpb 2026.08.38. Do not edit by hand:
 // run `./gradlew generateEngine`. `./gradlew checkGenerated` fails when this
 // file and the pinned bundle disagree.
 //
