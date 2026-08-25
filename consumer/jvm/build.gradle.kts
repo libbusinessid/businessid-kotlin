@@ -8,7 +8,7 @@ plugins {
 
 // The library, exactly as a project would take it from a repository.
 dependencies {
-    implementation("io.libbusinessid:businessid:${providers.gradleProperty("businessid.version").get()}")
+    implementation("io.github.libbusinessid:businessid:${providers.gradleProperty("businessid.version").get()}")
     testImplementation(kotlin("test"))
 }
 
@@ -46,7 +46,7 @@ tasks.register("verifyDependencies") {
     }
     doLast {
         val expected = listOf(
-            "io.libbusinessid:businessid",
+            "io.github.libbusinessid:businessid",
             "org.jetbrains.kotlin:kotlin-stdlib",
             "org.jetbrains:annotations",
         )

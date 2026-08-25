@@ -10,7 +10,8 @@ That is the entry point `engine.md` section 12.5 requires, and it is what CI
 calls, so "green" never has two definitions. It runs the lock digests, the
 regeneration of the emitted sources, compilation, tests, the shared conformance
 suite against the runner from `spec`, lint, format, coverage and its thresholds,
-and packaging including both consumer projects.
+packaging including both consumer projects, and the far end of the supported JDK
+range.
 
 Its contract:
 
@@ -74,6 +75,25 @@ The pull request is opened green or red. **A red one is never merged to unblock
 the chain**: it is corrected, or the release is refused with the reason written
 down. Red means the release brought something this engine does not yet do, which
 is exactly the case that wanted a human.
+
+## A tag publishes, nothing else does
+
+`.github/workflows/release.yml` is the only thing that reaches Maven Central, and
+only a tag starts it. It uploads to the Central Portal through the publisher API
+with `curl` — no plugin runs with the signing key in scope — and as a
+`USER_MANAGED` deployment, which stops at `VALIDATED` and waits for a person.
+`engine.md` section 11.4: merging verified code and publishing a package are not
+the same act, and the second is the only irreversible one.
+
+The published groupId is `io.github.libbusinessid`. **The Kotlin package
+namespace is `io.libbusinessid` and does not move.** A groupId cannot be changed
+after a first publication without breaking every consumer, so `PackagingTest`
+freezes it rather than leaving it to a property file.
+
+`CONTRIBUTING.md` names the four secrets and the one namespace verification a
+human has to do; nothing here invents a fifth.
+
+## Rules versions
 
 Nothing here compares rules versions for order — `PATCH` in `YYYY.MM.PATCH` is a
 counter within a month with no upper bound, so `2026.08.32` legitimately follows

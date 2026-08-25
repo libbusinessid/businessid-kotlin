@@ -20,8 +20,33 @@ val rulesVersion: String = rootProject.layout.projectDirectory.file("rules.lock"
     .substringBefore('"')
 
 // The toolchain is locked so that a build produces the same bytecode everywhere.
+//
+// `-Pbusinessid.toolchain=N` moves it, and that is how `scripts/verify.sh`
+// covers the far end of the supported range without a second runner. It moves
+// the *toolchain*, not the daemon, and the distinction is the whole point:
+// detekt and ktlint each embed a Kotlin compiler that refuses a class file
+// version newer than the release it was built against, and both run inside the
+// daemon. A daemon on JDK 25 stops them before they read a line — which is why
+// the CI job that used to carry the range set `java-version: 25` and got a
+// daemon on 25 with the tests still running on 17, since this toolchain pinned
+// them there. It never once ran the code on the JDK it was named after.
+private val toolchainJdk: Int =
+    providers.gradleProperty("businessid.toolchain").map(String::toInt).getOrElse(BuildConstants.TOOLCHAIN_JDK)
+
 kotlin {
-    jvmToolchain(BuildConstants.TOOLCHAIN_JDK)
+    jvmToolchain(toolchainJdk)
+}
+
+// A run on another toolchain builds into a directory of its own.
+//
+// Two reasons, and both have a defect behind them. It must not leave its class
+// files and its jar where the pinned build's are, because the next thing to read
+// them would publish bytecode from a compiler the project does not ship with —
+// `test` depends on `jar`, so the jar is rebuilt whether or not anyone asked.
+// And `verify.sh` judges a step by the evidence it left: sharing the directory
+// would let the pinned run's own results stand in for a step that never ran.
+if (toolchainJdk != BuildConstants.TOOLCHAIN_JDK) {
+    layout.buildDirectory.set(layout.projectDirectory.dir("build/jdk$toolchainJdk"))
 }
 
 // Published bytecode targets 11: the floor Android's toolchain accepts without
@@ -55,6 +80,8 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.layout.projectDirectory.file("README.md")).withPropertyName("readme")
     systemProperty("businessid.spec.dir", specDir.asFile.absolutePath)
     systemProperty("businessid.project.version", project.version.toString())
+    // The published groupId, read by the tests that freeze the coordinates.
+    systemProperty("businessid.project.group", project.group.toString())
     // Read from rules.lock rather than repeated in each test: a resync moves it,
     // and a literal in six files is six ways to forget one.
     systemProperty("businessid.rules.version", rulesVersion)

@@ -91,8 +91,13 @@ publishing {
 }
 
 signing {
-    // Only signs when a key is configured, so a local build needs no secret.
-    isRequired = providers.environmentVariable("SIGNING_KEY").isPresent
+    // A snapshot build needs no secret. A release build refuses to produce an
+    // unsigned artefact, and that is the point: keying this off the presence of
+    // `SIGNING_KEY` instead — which is what it did — makes a missing secret look
+    // like a successful release. Gradle would skip the signing task, the bundle
+    // would carry no `.asc`, and the first thing to notice would be the Central
+    // Portal, after the tag was pushed.
+    isRequired = !version.toString().endsWith("-SNAPSHOT")
     useInMemoryPgpKeys(
         providers.environmentVariable("SIGNING_KEY").orNull,
         providers.environmentVariable("SIGNING_PASSWORD").orNull,
@@ -129,11 +134,15 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
 tasks.register("auditPublishedDependencies") {
     group = "verification"
     description = "Fails when the published library declares a dependency beyond the Kotlin standard library."
+    // Read from the project rather than repeated: the coordinates moved once
+    // already, and a literal here would have turned the library itself into a
+    // dependency of itself and failed the audit for the wrong reason.
+    val self = "${project.group}:${project.name}"
     val resolved = configurations.named("runtimeClasspath").map { classpath ->
         classpath.incoming.resolutionResult.allComponents
             .mapNotNull { it.moduleVersion?.module?.toString() }
             // The library itself is the root of the graph, not a dependency.
-            .filterNot { it == "io.libbusinessid:businessid" }
+            .filterNot { it == self }
             .distinct()
             .sorted()
     }

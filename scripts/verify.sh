@@ -23,6 +23,13 @@
 #
 # And a step that cannot run must say so rather than be skipped. The Android
 # consumer needs an SDK; without one it is a failure here, not an omission.
+#
+# What is deliberately not here: the random fuzzing search. `test` already runs
+# every Jazzer target over its committed seed corpus, which is a verdict and
+# reproducible; the ten seconds of random search on top of it are a search, and a
+# search that fails on a different commit each time turns the one command
+# everyone runs into something they learn to re run. `ci.yml` keeps it in a job
+# of its own and `scheduled.yml` runs it for ten minutes a target.
 
 set -euo pipefail
 
@@ -34,6 +41,18 @@ trap 'rm -rf "$WORK"' EXIT
 touch "$MARKER"
 
 GRADLE=(./gradlew --console=plain --quiet)
+
+# The two ends of the supported JDK range, read from the file that defines them,
+# so the range is not restated here and in two workflows.
+readonly CONSTANTS="buildSrc/src/main/kotlin/BuildConstants.kt"
+PINNED_JDK="$(sed -n 's/.*TOOLCHAIN_JDK: Int = \([0-9]*\).*/\1/p' "$CONSTANTS")"
+FAR_JDK="$(sed -n 's/.*TOOLCHAIN_JDK_MAX: Int = \([0-9]*\).*/\1/p' "$CONSTANTS")"
+if [ -z "$PINNED_JDK" ] || [ -z "$FAR_JDK" ]; then
+  printf 'verify: cannot read TOOLCHAIN_JDK and TOOLCHAIN_JDK_MAX from %s\n\n' "$CONSTANTS" >&2
+  printf 'The supported range has one definition and this command could not find it.\n' >&2
+  printf 'Read: pinned "%s", far end "%s".\n' "$PINNED_JDK" "$FAR_JDK" >&2
+  exit 1
+fi
 
 fail() {
   local name="$1" log="$2" code="${3:-1}"
@@ -125,11 +144,37 @@ fresh "consumers" "consumer/jvm/build/test-results consumer/android/build/test-r
 # rules.lock records under source_commit — the same commit as the corpus, so it
 # is impossible to judge a corpus with another comparator.
 SOURCE_COMMIT="$(grep '^source_commit' rules.lock | cut -d'"' -f2)"
+# Every declared dependency resolves. A moved or withdrawn artefact fails here
+# rather than at a release, and this is where "packaging is verified" stops being
+# a claim about the jar alone.
+step "dependency resolution" "${GRADLE[@]}" resolveAllDependencies
+
 step "conformance testee" "${GRADLE[@]}" :testee:installDist
 step "conformance" env GOTOOLCHAIN=auto go run \
   "github.com/libbusinessid/spec/cmd/conformance-runner@$SOURCE_COMMIT" \
   -corpus spec/businessid-conformance.binpb \
   -- ./testee/build/install/businessid-testee/bin/businessid-testee
+
+# The far end of the supported range, and the last step because it is the most
+# expensive: a toolchain change recompiles everything into a build directory of
+# its own.
+#
+# This used to be a CI job called `Toolchain 25`, and it never ran anything on
+# JDK 25. It set `java-version: 25`, which moves the Gradle daemon; the tests
+# followed `jvmToolchain`, which pins them to 17. Measured by asking the daemon
+# on a JDK 26 what it launched the test executor with, and getting 17. It is
+# here now because the entry point is meant to be the whole verification —
+# a branch protection that requires this verdict and nothing else was letting
+# every synchronization pull request merge without the range having spoken, and
+# what it would have said was nothing anyway.
+#
+# The toolchain moves and the daemon does not, on purpose: detekt and ktlint
+# each embed a Kotlin compiler that refuses a class file version newer than the
+# release it was built against, and both run inside the daemon. They had their
+# say above, on the JDK this project pins.
+step "toolchain $FAR_JDK" "${GRADLE[@]}" test --rerun -Pbusinessid.toolchain="$FAR_JDK"
+fresh "toolchain $FAR_JDK" \
+  "businessid/build/jdk$FAR_JDK/test-results generator/build/jdk$FAR_JDK/test-results testee/build/jdk$FAR_JDK/test-results"
 
 # -- the one line ------------------------------------------------------------
 #
@@ -155,5 +200,5 @@ COVERAGE="$(sed -n 's/^hand written *lines *\([0-9.]*\)% .* branches *\([0-9.]*\
 JAR="$(find businessid/build/libs -name 'businessid-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' -type f | head -1)"
 JAR_BYTES="$(wc -c <"$JAR" | tr -d ' ')"
 
-printf 'verify ok — rules %s · conformance %s · tests %s · coverage %s · jar %s B\n' \
-  "$RULES" "$CONFORMANCE" "$TESTS" "$COVERAGE" "$JAR_BYTES"
+printf 'verify ok — rules %s · conformance %s · tests %s · toolchains %s+%s · coverage %s · jar %s B\n' \
+  "$RULES" "$CONFORMANCE" "$TESTS" "$PINNED_JDK" "$FAR_JDK" "$COVERAGE" "$JAR_BYTES"

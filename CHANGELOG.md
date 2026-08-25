@@ -10,6 +10,31 @@ independently.
 
 ### Added
 
+- A release workflow. Maven Central is the only way this engine reaches a
+  consumer, and there was none: `ci.yml` published a dry run into a local
+  directory and nothing went further. A tag `vx.y.z` now checks that the tag,
+  `EngineVersion.VALUE` and the changelog agree, runs the whole CI suite at that
+  commit, and uploads a signed bundle to the Central Portal as a `USER_MANAGED`
+  deployment, which stops at `VALIDATED` and waits for a person. Section 11.4
+  asks for the tag and the publication to stay manual, and both do.
+- The upload is `curl` against the Portal's publisher API, not JReleaser and not
+  a community Gradle plugin. Sonatype ships no plugin for the Portal and does not
+  support the community ones, so this is a choice rather than a default, and it
+  is a supply chain one: whatever does the upload runs with a PGP private key and
+  a publishing token in its environment. JReleaser is a release orchestrator
+  whose transitive closure — changelogs, Homebrew, Docker, a dozen announcement
+  services — would all sit in that process for the sake of one HTTP POST, and a
+  Gradle plugin would sit on the build script classpath of *every* build here,
+  not only of a release. The API is four documented endpoints.
+- `scripts/release-bundle.sh` builds that bundle and refuses to hand over one the
+  Portal would reject: a missing signature, an `.asc` that is not one, the
+  `maven-metadata.xml` Gradle writes for a repository rather than for a
+  deployment, a snapshot version, a POM without a field Central requires. Each of
+  those was watched failing. CI runs the script on every pull request with a
+  throwaway key it generates and discards, so the script a tag depends on is
+  never running for the first time — which is the shape of defect the first
+  specification release produced seven times out of nine.
+
 - The first Kotlin engine: a generator that reads `businessid-rules.binpb`, runs
   the twenty-five load checks of `ir.md` section 10 and emits Kotlin; the
   emitted rules; the primitives they call; and the public API.
@@ -61,6 +86,19 @@ independently.
 
 ### Fixed
 
+- `Toolchain 25` never ran anything on JDK 25. The job set `java-version: 25`,
+  which moves the Gradle daemon, while `jvmToolchain(17)` kept compilation and
+  the tests on 17 whatever the daemon was — measured by asking a daemon on JDK 26
+  what it launched the test executor with, and being told 17. The weekly matrix of
+  `17`, `21` and `25` carried the same defect and exercised one JDK three times.
+  Both now move the *toolchain*, through `-Pbusinessid.toolchain`, and leave the
+  daemon on the JDK detekt and ktlint need.
+- A release build could have produced an unsigned artefact. `signing` was required
+  only when `SIGNING_KEY` happened to be set, so a missing secret would have made
+  Gradle skip the task and left the Central Portal to notice, after the tag was
+  pushed. It is now required whenever the version is not a snapshot, and a release
+  without a key fails at the signing task by name.
+
 - Building the entry point found three ways a partial command reports a verdict
   it never computed. `--rerun` is a task option that binds to the task it
   follows, so `a b c --rerun` forces `c` alone; it does not reach a lifecycle
@@ -91,6 +129,30 @@ independently.
   benchmarks.
 
 ### Changed
+
+- The published groupId is `io.github.libbusinessid`. **The Kotlin package
+  namespace does not move and stays `io.libbusinessid`**; only the Maven
+  coordinates change. `io.libbusinessid` is not a namespace anyone can verify on
+  the Central Portal, which verifies a domain by DNS or a GitHub account by
+  ownership, and `libbusinessid.io` is a domain nobody here owns. A groupId cannot
+  be changed after a first publication without breaking every consumer, so
+  `PackagingTest` freezes it and `ReadmeTest` holds the install snippets to it.
+- `./scripts/verify.sh` now covers the far end of the supported JDK range and the
+  resolution of every declared dependency, and prints both ends of the range in
+  its one line. Section 11.4 asks for the entry point to be the only required
+  check, because a synchronization pull request publishes exactly that one status
+  — so everything outside it could merge unseen, and the JDK matrix and the
+  dependency audit were outside it. `Toolchain 25` and `Dependency audit` are gone
+  from `ci.yml`. A run on the other toolchain builds into `build/jdk<n>/`, so it
+  never overwrites what the pinned one produced: `test` depends on `jar`, and a
+  shared directory would have left a jar built by a compiler this project does not
+  ship with where the next step would read it.
+- The random fuzzing search stays outside `verify.sh`, deliberately. `test`
+  already runs every Jazzer target over its committed seed corpus, which is a
+  verdict and is reproducible; the ten seconds of random search on top are a
+  search, and a search that fails on a different commit each time turns the one
+  command everyone runs into one they learn to re-run. `ci.yml` keeps it in a job
+  of its own.
 
 - Compiled against rules `2026.08.32`. The version moves backwards on purpose:
   `PATCH` in `YYYY.MM.PATCH` is a counter within a month with no upper bound, and

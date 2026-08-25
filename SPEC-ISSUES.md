@@ -198,6 +198,40 @@ runs the same tasks as its `ci.yml` counterpart. The scheduled workflow now also
 runs on pull requests that touch it or the benchmarks, so the next breakage of
 either is visible before it is merged rather than on a Monday.
 
+### `Toolchain 25` ran, passed, and measured nothing
+
+**Measured.** `ci.yml` carried a job named `Toolchain 25` and `scheduled.yml` a
+matrix of `17`, `21` and `25`, both setting `java-version` to the JDK under test.
+That moves the **Gradle daemon**. It does not move the compiler or the test JVM:
+`businessid.kotlin-base` sets `jvmToolchain(17)`, which binds every `JavaCompile`
+and every `Test` to a launcher for the pinned JDK whatever the daemon is. Asked
+directly, with the daemon on the newest JDK installed here:
+
+```text
+$ JAVA_HOME=…/temurin-26.jdk/Contents/Home ./gradlew --info :businessid:test …
+Starting process 'Gradle Test Executor 1'. Command: …/java/17.0.20-tem/bin/java
+```
+
+Four named runs across two workflows, one JDK ever exercised, and nothing could
+have failed to say so. The one thing those jobs did prove — that the build
+configures under a newer daemon — is not what either of them was named after, and
+is contradicted by the entry above: the analysers cannot run on such a daemon at
+all.
+
+**What this engine does.** `-Pbusinessid.toolchain=N` moves the toolchain and
+leaves the daemon alone, which is the way round that matches what the range
+means: the library's bytecode targets 11 and has to load and behave on the far
+end, while detekt and ktlint have to run on the JDK they were built against.
+`scripts/verify.sh` runs the whole suite on the pinned JDK and the test suite
+again on the far end, so the entry point of section 12.5 covers the range and the
+`ci.yml` job is gone. The weekly matrix keeps all three, through the property.
+
+A run on another toolchain builds into `build/jdk<n>/`. Sharing the directory
+would have let `test` — which depends on `jar` — leave a jar compiled by a
+toolchain this project does not ship with where the packaging step reads one, and
+would have let the pinned run's own test results stand as evidence that the other
+step ran at all.
+
 ## Settled upstream
 
 ### 1. `engine.md` section 9.1 contradicted itself on an out of bounds access — clause removed

@@ -1,0 +1,277 @@
+# Copyright The LibBusinessID Authors.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Publishing to Maven Central, through the Central Portal.
+#
+# ---------------------------------------------------------------------------
+# Why this is curl and not a plugin
+# ---------------------------------------------------------------------------
+#
+# OSSRH is gone and the Central Portal replaced it, and Sonatype ships no Gradle
+# plugin for it. What it points at instead is JReleaser, its own OSSRH Staging
+# API, or community plugins it says outright that it does not support. That is a
+# choice to make on purpose rather than by habit, because whatever is chosen runs
+# with a PGP private key and a publishing token in its environment.
+#
+# JReleaser is a release orchestrator: changelogs, GitHub and GitLab releases,
+# Homebrew, SDKMAN, Docker, and announcements to a dozen chat and social
+# services. Every one of those is code inside the process holding the signing
+# key, and every one of its transitive dependencies is too — for a job that is
+# one HTTP POST. A community Gradle plugin costs more still: it goes on the build
+# script classpath, so it runs at configuration time of *every* build in this
+# repository and not only of a release, and this build states that every plugin
+# it applies comes through `buildSrc` pinned by `gradle/libs.versions.toml`.
+#
+# The Portal's publisher API is four endpoints, documented and stable. Gradle
+# already produces the artefacts, the POM and the checksums, and its own signing
+# plugin — already configured here, already exercised — produces the signatures.
+# What is left is to zip a directory and post it, which `curl` and `zip` do, and
+# both are already on the runner. So this workflow adds no dependency at all to
+# the operation that holds the key.
+#
+# The price is that this repository owns the upload and the polling instead of a
+# maintained tool. It is about sixty lines, it is read by whoever reviews a
+# release, and if the Portal changes its API this fails loudly on a tag rather
+# than publishing something wrong quietly. That is the trade, taken deliberately.
+#
+# ---------------------------------------------------------------------------
+# What is manual, and what is not
+# ---------------------------------------------------------------------------
+#
+# `engine.md` section 11.4: "le tag et la publication restent manuels" — merging
+# verified code and publishing a package are not the same act, and the second is
+# the only irreversible one. Both halves of that sentence are honoured here. The
+# tag is pushed by a person, and it is the only trigger. And the deployment is
+# uploaded as `USER_MANAGED`, so it stops at VALIDATED on the Portal, where a
+# person presses Publish having seen the validation report. A tag can be deleted,
+# a deployment can be dropped; a version on Maven Central can never be replaced
+# or removed, only deprecated.
+#
+# ---------------------------------------------------------------------------
+# The four secrets, and where they come from
+# ---------------------------------------------------------------------------
+#
+#   CENTRAL_PORTAL_USERNAME  |  central.sonatype.com/account -> Generate User
+#   CENTRAL_PORTAL_PASSWORD  |  Token. The pair is one token; regenerating it
+#                            |  invalidates the previous one.
+#   SIGNING_KEY              |  An ASCII armoured PGP private key, whose public
+#                            |  half is on a keyserver Central checks.
+#   SIGNING_PASSWORD         |  Its passphrase.
+#
+# They are repository secrets, and there are no others. The first step of the
+# publishing job names every one that is missing and stops; nothing is skipped
+# quietly, and no half of a release is uploaded.
+#
+# ---------------------------------------------------------------------------
+# What has never run
+# ---------------------------------------------------------------------------
+#
+# At the time of writing, the `io.github.libbusinessid` namespace is not verified
+# on the Portal and none of the four secrets exists. Everything up to and
+# including `scripts/release-bundle.sh` has been run — CI rehearses it on every
+# pull request with a throwaway key. The two steps below that speak to the Portal
+# have not, and cannot be until a human does the two things `CONTRIBUTING.md`
+# describes. They are written to fail on a missing id, a non-2xx response, an
+# unexpected state and a timeout, rather than to look successful.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  # Not `release-...`: `ci.yml` is called from here, and inside a called workflow
+  # `github.workflow` is the *caller's* name, so its own group evaluates to
+  # `Release-<ref>`. Concurrency group names are compared case insensitively, and
+  # `ci.yml` cancels in progress runs of its group — this workflow would have
+  # cancelled itself the moment the verification started.
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  guard:
+    name: The tag is the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Gradle takes the version from a property and never looks at the tag, so
+      # a run on `v0.2.0` would happily publish whatever the sources declare —
+      # and the artefact would be a valid one, which is what makes it silent.
+      - name: The tag, the engine constant and the changelog agree
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+
+          declared="$(sed -n 's/.*VALUE: String = "\(.*\)".*/\1/p' \
+            businessid/src/main/kotlin/io/libbusinessid/internal/EngineVersion.kt)"
+          if [ -z "$declared" ]; then
+            echo "::error::cannot read EngineVersion.VALUE"
+            exit 1
+          fi
+          if [ "$version" != "$declared" ]; then
+            echo "::error::tag $TAG would publish $version, but the engine reports $declared"
+            exit 1
+          fi
+
+          # A release nobody wrote down is one nobody can read the shape of
+          # later. `Unreleased` is not a version.
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$version]' section"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing \`$version\` from \`$TAG\`." >> "$GITHUB_STEP_SUMMARY"
+
+  # The whole suite at the commit being published, called rather than copied: a
+  # release that skips a check the branch runs is not a release of what was
+  # reviewed. `verify.sh` is inside it, and so is the bundle rehearsal.
+  verification:
+    name: Verification
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Upload to the Central Portal
+    needs: [guard, verification]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.guard.outputs.version }}
+    steps:
+      # First, and before a checkout: a release that discovers a missing secret
+      # halfway through has already built and signed something.
+      - name: Every secret this job needs
+        env:
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in CENTRAL_PORTAL_USERNAME CENTRAL_PORTAL_PASSWORD SIGNING_KEY SIGNING_PASSWORD; do
+            [ -n "${!name:-}" ] || missing+=("$name")
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::missing repository secrets: ${missing[*]}"
+            echo "CONTRIBUTING.md, section 'Releasing', says where each of them comes from." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # The same script the pull request rehearsal runs, at the tagged commit and
+      # with the real key. It refuses to hand over an archive the Portal would
+      # reject: a missing signature, a stray file, a snapshot, a POM without a
+      # field Central requires.
+      - name: Build and sign the bundle
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./scripts/release-bundle.sh "$VERSION"
+
+      - name: Upload the deployment
+        id: upload
+        env:
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+        run: |
+          set -euo pipefail
+          auth="$(printf '%s:%s' "$CENTRAL_PORTAL_USERNAME" "$CENTRAL_PORTAL_PASSWORD" | base64 | tr -d '\n')"
+
+          # USER_MANAGED: this stops at VALIDATED and waits for a person. See the
+          # header of this file.
+          id="$(curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${auth}" \
+            --form "bundle=@build/central-bundle.zip" \
+            "https://central.sonatype.com/api/v1/publisher/upload?name=businessid-${VERSION}&publishingType=USER_MANAGED")"
+
+          # The endpoint answers with a deployment id and nothing else. An empty
+          # body with a 2xx is not a success anyone can act on.
+          case "$id" in
+            [0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*) ;;
+            *)
+              echo "::error::the upload did not return a deployment id: ${id:-<empty>}"
+              exit 1
+              ;;
+          esac
+          echo "deployment=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the Portal to validate it
+        env:
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+          DEPLOYMENT: ${{ steps.upload.outputs.deployment }}
+        run: |
+          set -euo pipefail
+          auth="$(printf '%s:%s' "$CENTRAL_PORTAL_USERNAME" "$CENTRAL_PORTAL_PASSWORD" | base64 | tr -d '\n')"
+
+          for _ in $(seq 1 60); do
+            body="$(curl --fail-with-body --silent --show-error \
+              --request POST \
+              --header "Authorization: Bearer ${auth}" \
+              "https://central.sonatype.com/api/v1/publisher/status?id=${DEPLOYMENT}")"
+            state="$(printf '%s' "$body" | jq -r '.deploymentState // empty')"
+            case "$state" in
+              VALIDATED)
+                {
+                  echo "## Waiting for you"
+                  echo
+                  echo "Deployment \`${DEPLOYMENT}\` for \`${VERSION}\` is **VALIDATED** and published nowhere yet."
+                  echo
+                  echo "Open <https://central.sonatype.com/publishing/deployments>, read what it says it"
+                  echo "would publish, and press Publish. Until you do, it can still be dropped; afterwards"
+                  echo "the version exists for ever and can only be deprecated."
+                } >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+                ;;
+              PUBLISHING | PUBLISHED)
+                # Not what USER_MANAGED asks for. Something else published this,
+                # and saying so is more useful than reporting success.
+                echo "::error::deployment ${DEPLOYMENT} is ${state}, but it was uploaded as USER_MANAGED"
+                exit 1
+                ;;
+              FAILED)
+                echo "::error::the Portal refused deployment ${DEPLOYMENT}"
+                printf '%s\n' "$body" | jq -r '.errors // .' >&2
+                exit 1
+                ;;
+              PENDING | VALIDATING)
+                sleep 10
+                ;;
+              *)
+                echo "::error::unexpected deployment state: ${state:-<none>}"
+                printf '%s\n' "$body" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          # Ten minutes without a verdict is not a verdict.
+          echo "::error::deployment ${DEPLOYMENT} was still not validated after 10 minutes"
+          exit 1

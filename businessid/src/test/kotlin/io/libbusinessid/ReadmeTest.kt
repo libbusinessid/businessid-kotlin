@@ -82,6 +82,22 @@ class ReadmeTest {
     }
 
     @Test
+    fun `the README installs the coordinates this build publishes`() {
+        val group = requireNotNull(System.getProperty("businessid.project.group"))
+        val version = requireNotNull(System.getProperty("businessid.project.version")).removeSuffix("-SNAPSHOT")
+        // The Install section is the one part of the README a reader copies
+        // rather than reads. Coordinates that no longer resolve are a broken
+        // build for them and a silent edit here.
+        assertTrue(
+            """implementation("$group:businessid:$version")""" in readme,
+            "the Gradle snippet names other coordinates than $group:businessid:$version",
+        )
+        assertTrue("<groupId>$group</groupId>" in readme, "the Maven snippet names another groupId")
+        assertTrue("<artifactId>businessid</artifactId>" in readme, "the Maven snippet names another artifactId")
+        assertTrue("<version>$version</version>" in readme, "the Maven snippet names another version")
+    }
+
+    @Test
     fun `the figures the README states`() {
         val info = engine.rulesInfo()
         assertTrue("rules ${info.rulesVersion}, format version ${info.formatVersion}" in readme)

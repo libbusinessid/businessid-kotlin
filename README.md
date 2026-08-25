@@ -59,7 +59,7 @@ Gradle:
 
 ```kotlin
 dependencies {
-    implementation("io.libbusinessid:businessid:0.1.0")
+    implementation("io.github.libbusinessid:businessid:0.1.0")
 }
 ```
 
@@ -67,7 +67,7 @@ Maven:
 
 ```xml
 <dependency>
-  <groupId>io.libbusinessid</groupId>
+  <groupId>io.github.libbusinessid</groupId>
   <artifactId>businessid</artifactId>
   <version>0.1.0</version>
 </dependency>
@@ -295,6 +295,28 @@ token:
 
 Tagging and publishing stay manual. Nothing in this workflow releases anything.
 
+## Releasing
+
+The library is published to Maven Central as `io.github.libbusinessid:businessid`
+— the Maven coordinates; the Kotlin package namespace is `io.libbusinessid` and
+does not move.
+
+A tag `vx.y.z` is the only thing that publishes.
+`.github/workflows/release.yml` checks that the tag, `EngineVersion.VALUE` and
+the changelog agree, runs the whole CI suite at that commit, builds a signed
+bundle with `./scripts/release-bundle.sh`, and uploads it to the Central Portal
+as a `USER_MANAGED` deployment. It stops at `VALIDATED`; a person presses
+Publish, having read what the Portal says it would publish. A tag can be deleted
+and a deployment can be dropped — a version on Maven Central can only ever be
+deprecated.
+
+The upload is `curl` against the Portal's publisher API. Sonatype ships no Gradle
+plugin for the Portal, and what does the upload runs with a PGP private key and a
+publishing token in its environment, so it is four documented endpoints rather
+than a release orchestrator or a plugin on the build script classpath.
+`CONTRIBUTING.md` names the four repository secrets and the one namespace
+verification a human has to do before any of it works.
+
 ## Conformance
 
 The runner comes from the `spec` repository and from nowhere else, pinned to the
@@ -324,13 +346,16 @@ One command verifies everything, and it is the one CI runs:
 ```
 
 ```text
-verify ok — rules 2026.08.33 · conformance 676/676 · tests 558 · coverage 99.04%/93.07% · jar 143045 B
+verify ok — rules 2026.08.33 · conformance 676/676 · tests 568 · toolchains 17+25 · coverage 99.04%/93.07% · jar 143431 B
 ```
 
 It covers the lock digests, the regeneration of the emitted sources,
 compilation, tests, the shared conformance suite against the runner from `spec`,
-lint, format, coverage and its thresholds, and packaging including both consumer
-projects. It prints that one line when everything passes, the failing step's
+lint, format, coverage and its thresholds, the resolution of every declared
+dependency, packaging including both consumer projects, and both ends of the
+supported JDK range — the pinned toolchain throughout, and the far end compiled
+and run again with `-Pbusinessid.toolchain`. It prints that one line when
+everything passes, the failing step's
 output and only that when something does not, and exits non-zero either way it
 should. `engine.md` section 12.5 asks for it; `CLAUDE.md` says why it is worth
 preferring to the pieces.
@@ -343,6 +368,7 @@ The pieces are still there when a single one is what you want:
 ./gradlew generateEngine   # re-emit the rules from the ruleset
 ./gradlew checkGenerated   # fail when the committed sources are stale
 ./gradlew fuzz             # Jazzer, beyond the regression corpus
+./gradlew test -Pbusinessid.toolchain=25   # the far end of the range, alone
 ./gradlew :benchmarks:jmh  # the five measurements section 14 asks for, and more
 ```
 

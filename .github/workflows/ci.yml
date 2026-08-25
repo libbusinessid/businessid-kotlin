@@ -8,6 +8,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Called by `release.yml`, so a tag runs the suite the branch runs rather than
+  # a second definition of it that could drift.
+  workflow_call:
 
 permissions:
   contents: read
@@ -41,6 +44,21 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          # `verify.sh` compiles and runs the code on the far end of the
+          # supported range as well, through a Gradle toolchain that Gradle
+          # provisions itself. Without `jdks` here that JDK is downloaded again
+          # on every run: the action caches `caches` and `notifications` only.
+          #
+          # Provisioned rather than installed by `setup-java`, because Gradle
+          # does not detect the `JAVA_HOME_<version>_<arch>` variables that
+          # action exports — naming them here would make the range depend on a
+          # runner architecture, and would be one more way for CI and a
+          # developer's machine to disagree about what `verify.sh` verified.
+          gradle-home-cache-includes: |
+            caches
+            notifications
+            jdks
 
       # For the conformance runner, which comes from `spec` and from nowhere
       # else, pinned by `verify.sh` to the commit rules.lock records.
@@ -54,50 +72,6 @@ jobs:
       # when it does not. There is no second definition of green here.
       - name: Verify
         run: ./scripts/verify.sh
-
-  build:
-    name: Toolchain ${{ matrix.jdk }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # `verify` already covers the JDK this project pins, so this job is
-        # only about the far end of the supported range. The published bytecode
-        # targets 11 whichever one builds it.
-        jdk: ['25']
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up the JDK
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
-        with:
-          distribution: temurin
-          java-version: ${{ matrix.jdk }}
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-        with:
-          validate-wrappers: true
-
-      - name: Tests
-        run: ./gradlew test
-
-      - name: Coverage
-        run: ./gradlew coverage
-
-      - name: Assemble
-        run: ./gradlew assemble
-
-      - name: Upload the reports
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: reports-jdk-${{ matrix.jdk }}
-          path: |
-            **/build/reports/
-            **/build/test-results/
-            build/reports/coverage-summary.txt
-          retention-days: 7
 
   fuzz-smoke:
     name: Fuzz smoke
@@ -128,7 +102,7 @@ jobs:
           retention-days: 30
 
   publication:
-    name: Publication dry run
+    name: Release rehearsal
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -142,41 +116,52 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
-      - name: Publish into a local repository
-        run: ./gradlew publishMavenPublicationToLocalStagingRepository
+      # A key that exists for the length of this job and signs nothing anyone
+      # will ever receive. It is here so that `scripts/release-bundle.sh` — the
+      # script a tag runs, with the real key, against a registry that keeps what
+      # it is given for ever — has run before that tag exists. This project has
+      # shipped a release where seven of nine defects were in steps that had
+      # never been able to run once.
+      - name: A throwaway signing key
+        run: |
+          set -euo pipefail
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          cat > "$GNUPGHOME/params" <<'EOF'
+          Key-Type: RSA
+          Key-Length: 3072
+          Name-Real: LibBusinessID release rehearsal
+          Name-Email: rehearsal@invalid
+          Expire-Date: 0
+          Passphrase: rehearsal
+          %commit
+          EOF
+          gpg --batch --pinentry-mode loopback --gen-key "$GNUPGHOME/params"
+          key="$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')"
+          {
+            echo 'SIGNING_KEY<<REHEARSAL_KEY_EOF'
+            gpg --batch --pinentry-mode loopback --passphrase rehearsal \
+              --armor --export-secret-keys "$key"
+            echo 'REHEARSAL_KEY_EOF'
+          } >> "$GITHUB_ENV"
 
-      - name: Documentation
-        run: ./gradlew :businessid:dokkaGeneratePublicationHtml
+      # The version a tag would carry, read where the release guard reads it.
+      - name: Build the bundle the Central Portal would receive
+        env:
+          SIGNING_PASSWORD: rehearsal
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/.*VALUE: String = "\(.*\)".*/\1/p' \
+            businessid/src/main/kotlin/io/libbusinessid/internal/EngineVersion.kt)"
+          ./scripts/release-bundle.sh "$version"
 
       - name: What would be published
-        run: |
-          find businessid/build/staging-repository -type f \
-            \( -name '*.jar' -o -name '*.pom' -o -name '*.module' \) | sort
+        run: unzip -Z1 build/central-bundle.zip | sort
 
-      - name: Upload the artefacts
+      - name: Upload the bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: maven-staging
-          path: businessid/build/staging-repository/
+          name: central-bundle
+          path: build/central-bundle.zip
           retention-days: 7
-
-  dependencies:
-    name: Dependency audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up the JDK
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-
-      - name: What the published library brings with it
-        run: ./gradlew :businessid:auditPublishedDependencies
-
-      - name: Resolve every declared dependency
-        run: ./gradlew resolveAllDependencies

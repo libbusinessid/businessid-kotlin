@@ -63,6 +63,22 @@ class PackagingTest {
     }
 
     @Test
+    fun `the published POM carries the coordinates Maven Central freezes`() {
+        val pom = File(requireNotNull(System.getProperty("businessid.pom"))).readText()
+        // A groupId cannot be changed after a first publication: every consumer
+        // names it, and the old coordinates keep resolving to the old artefact
+        // for ever. So it is frozen by a test rather than left to a property
+        // file, and `io.libbusinessid` is not it — the Central Portal verifies a
+        // namespace against a domain or a GitHub account, and nobody here owns
+        // `libbusinessid.io`.
+        assertTrue(
+            "<groupId>io.github.libbusinessid</groupId>" in pom,
+            "the POM declares another groupId than the verified namespace",
+        )
+        assertTrue("<artifactId>businessid</artifactId>" in pom, "the POM declares another artifactId")
+    }
+
+    @Test
     fun `the published POM declares nothing but the Kotlin standard library`() {
         val pom = File(requireNotNull(System.getProperty("businessid.pom"))).readText()
         val dependencies = Regex("<artifactId>([^<]+)</artifactId>\\s*<version>")

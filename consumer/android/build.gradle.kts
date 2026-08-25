@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    implementation("io.libbusinessid:businessid:${providers.gradleProperty("businessid.version").get()}")
+    implementation("io.github.libbusinessid:businessid:${providers.gradleProperty("businessid.version").get()}")
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
 }
