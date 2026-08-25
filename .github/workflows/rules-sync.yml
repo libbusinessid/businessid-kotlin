@@ -1,0 +1,525 @@
+# Copyright The LibBusinessID Authors.
+# SPDX-License-Identifier: Apache-2.0
+#
+# engine.md section 11.4: the engine fetches the release, the release does not
+# push into the engine.
+#
+# Two properties are the reason this lives here rather than in `spec`:
+#
+#   * regeneration needs this engine's toolchain, which `spec` does not have and
+#     never will. A release that pushed into four engines shipped the bundle and
+#     left the emitted code on the previous version, which is four red CIs;
+#   * `spec` no longer needs a write token on this repository. This workflow uses
+#     the `GITHUB_TOKEN` GitHub already hands it, so a compromise of `spec` stops
+#     at `spec`. That is also why the trigger is a clock and not a
+#     `repository_dispatch`: a pushed event would hand back the token the whole
+#     design removes.
+
+name: Rules sync
+
+on:
+  schedule:
+    # Daily. The latency is the price of the property above; the manual trigger
+    # below exists for the day it costs too much.
+    - cron: '37 4 * * *'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to synchronize. Empty means the newest published release.'
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: 'Download, verify, write, regenerate and verify — but push nothing and open nothing.'
+        required: false
+        type: boolean
+        default: false
+  # A workflow that has never run is the defect this repository keeps finding,
+  # and `workflow_dispatch` cannot reach a file that is not on the default branch
+  # yet: the first run of a new workflow would be its first run in production.
+  # So the pull request that changes this file rehearses it, in dry run —
+  # everything except the push, the pull request and the auto-merge. Same
+  # reasoning and same paths restriction as `scheduled.yml`.
+  pull_request:
+    paths:
+      - '.github/workflows/rules-sync.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  # One at a time, and never cancelled halfway: a cancelled run can leave a
+  # branch pushed with no pull request opened.
+  group: rules-sync
+  cancel-in-progress: false
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+  SPEC_REPO: libbusinessid/spec
+  SIGNER_WORKFLOW: .github/workflows/release.yml
+  # `github.event.inputs` rather than `inputs`: it is defined for every event,
+  # and is null outside a dispatch.
+  DRY_RUN: ${{ github.event_name == 'pull_request' || github.event.inputs.dry_run == 'true' }}
+
+jobs:
+  sync:
+    name: Fetch, verify, regenerate, open
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write # push the synchronization branch
+      pull-requests: write # open it, and ask for auto-merge
+    steps:
+      - name: Check out the engine
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Not shallow. `--force-with-lease` needs a remote-tracking ref to
+          # compare against, and in a shallow clone git refuses with "stale
+          # info" — `spec` hit exactly that from the other side and had to spell
+          # the expected value out. A full clone of this repository is cheap
+          # enough to make the question disappear.
+          fetch-depth: 0
+
+      # -- the comparison, and the fast path where there is nothing to do ------
+
+      - name: Compare the newest release to rules.lock
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          tag="${INPUT_TAG:-}"
+          if [ -z "$tag" ]; then
+            # Not `gh release view`, which reads /releases/latest: `release.yml`
+            # marks every ruleset that is not `stable` as a pre-release, and
+            # /releases/latest excludes pre-releases. Every release published so
+            # far is one, so asking for /latest would give this workflow nothing
+            # to do for as long as the ruleset stays alpha — a workflow that can
+            # never fire. The releases endpoint lists newest first; one page is
+            # plenty to find the newest published one.
+            tag="$(gh api "repos/${SPEC_REPO}/releases" \
+              --jq '[.[] | select(.draft == false)] | sort_by(.published_at) | last | .tag_name')"
+          fi
+          [ -n "$tag" ] || { echo "::error::${SPEC_REPO} has published no release"; exit 1; }
+
+          release="$(gh api "repos/${SPEC_REPO}/releases/tags/${tag}")"
+          version="$(printf '%s' "$release" | jq -r '
+            [.assets[].name
+             | select(startswith("businessid-manifest-") and endswith(".json"))
+             | ltrimstr("businessid-manifest-") | rtrimstr(".json")]
+            | unique | if length == 1 then .[0] else "" end')"
+          [ -n "$version" ] || { echo "::error::release ${tag} carries no single manifest asset"; exit 1; }
+
+          lock_value() {
+            sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\{0,1\}\([^\"]*\)\"\{0,1\}\$/\1/p" rules.lock
+          }
+          asset_digest() {
+            printf '%s' "$release" \
+              | jq -r --arg n "$1" '[.assets[] | select(.name == $n) | .digest // ""][0] // ""' \
+              | sed 's/^sha256://'
+          }
+
+          # Rules versions are compared for equality and never ordered. PATCH in
+          # YYYY.MM.PATCH is a counter within a month with no upper bound, so
+          # 2026.08.32 legitimately follows 2026.09.0 and nothing here may sort
+          # them. The two digests are compared as well, so a release republished
+          # under a version already pinned is not mistaken for the one in hand.
+          changed=true
+          if [ "$version" != "$(lock_value rules_version)" ]; then
+            reason="rules version $(lock_value rules_version) is not ${version} (${tag})"
+          elif [ -n "$(asset_digest "businessid-rules-${version}.binpb")" ] \
+            && [ "$(asset_digest "businessid-rules-${version}.binpb")" != "$(lock_value rules_sha256)" ]; then
+            reason="version ${version} matches but the bundle digest does not"
+          elif [ -n "$(asset_digest "businessid-conformance-${version}.binpb")" ] \
+            && [ "$(asset_digest "businessid-conformance-${version}.binpb")" != "$(lock_value conformance_sha256)" ]; then
+            reason="version ${version} matches but the corpus digest does not"
+          else
+            changed=false
+            reason="rules.lock already pins ${version} from ${tag}"
+          fi
+
+          proceed="$changed"
+          if [ "${DRY_RUN}" = "true" ]; then proceed=true; fi
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "changed=$changed"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "TAG=$tag"
+            echo "VERSION=$version"
+            echo "PROCEED=$proceed"
+          } >> "$GITHUB_ENV"
+          printf '%s\n' "$reason" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$proceed" != "true" ]; then
+            echo "Nothing to do." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # -- 1. download ---------------------------------------------------------
+
+      - name: Download the release artefacts
+        if: env.PROCEED == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Into the runner's temporary directory, not the checkout. Section 11.4
+          # is explicit: a release whose attestation does not verify must not even
+          # touch the working tree. Nothing below writes into it before the
+          # attestation step has passed.
+          rm -rf "${RUNNER_TEMP}/artifacts"
+          mkdir -p "${RUNNER_TEMP}/artifacts"
+          gh release download "${TAG}" --repo "${SPEC_REPO}" --dir "${RUNNER_TEMP}/artifacts"
+
+      # -- 2. the digests, then the attestation --------------------------------
+
+      - name: Verify the SHA-256 of every artefact
+        if: env.PROCEED == 'true'
+        working-directory: ${{ runner.temp }}/artifacts
+        run: sha256sum --check --strict SHA256SUMS
+
+      - name: Verify the provenance attestation
+        id: attestation
+        if: env.PROCEED == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "${RUNNER_TEMP}/artifacts"
+
+          # --repo and --owner are mutually exclusive: passing both makes gh
+          # refuse the arguments and verify nothing at all. `spec` shipped that
+          # once, and was saved only by the refusal being loud.
+          identity=(--repo "${SPEC_REPO}"
+                    --signer-workflow "${SPEC_REPO}/${SIGNER_WORKFLOW}"
+                    --source-ref "refs/tags/${TAG}")
+
+          # The commit comes from the signing certificate and not from the
+          # manifest. The manifest is a file the release workflow wrote, so its
+          # sourceCommit is predicate data the workflow controls; the
+          # certificate's source repository digest is filled from the OIDC token
+          # and cannot be forged by it. This is the commit the specification
+          # checkout below is pinned to, and the one rules.lock will record.
+          commit="$(gh attestation verify "businessid-manifest-${VERSION}.json" \
+            "${identity[@]}" --format json \
+            --jq '.[0].verificationResult.signature.certificate.sourceRepositoryDigest')"
+          if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::the attestation carries no source repository digest"
+            exit 1
+          fi
+
+          # Every subject this synchronization consumes, each bound to the owner,
+          # the repository, the signing workflow, the tag and now the commit.
+          # SHA256SUMS is one of them, which is what closes the loop with the
+          # step above: the digests of the two files the attestation does not
+          # cover are covered by a file it does.
+          for artefact in \
+            "businessid-rules-${VERSION}.binpb" \
+            "businessid-conformance-${VERSION}.binpb" \
+            "businessid-conformance-${VERSION}.jsonl.gz" \
+            "businessid-manifest-${VERSION}.json" \
+            rules.proto conformance.proto testee.proto ir.md features.md SHA256SUMS; do
+            gh attestation verify "$artefact" "${identity[@]}" --source-digest "$commit"
+          done
+
+          manifest="businessid-manifest-${VERSION}.json"
+          for pair in "rulesVersion:${VERSION}" "sourceCommit:${commit}"; do
+            field="${pair%%:*}"
+            want="${pair#*:}"
+            got="$(jq -r ".${field}" "$manifest")"
+            if [ "$got" != "$want" ]; then
+              echo "::error::the manifest names ${field} ${got}, the release and its certificate name ${want}"
+              exit 1
+            fi
+          done
+
+          echo "SOURCE_COMMIT=$commit" >> "$GITHUB_ENV"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+      # -- 3. write spec/, rules.lock and spec/PROVENANCE.md -------------------
+
+      - name: Check out the specification at the attested commit
+        if: env.PROCEED == 'true'
+        run: |
+          set -euo pipefail
+          # `actions/checkout` can only place a repository under the workspace,
+          # and a second checkout there would sit in the path ktlint, detekt and
+          # `git add` all walk. Plain git into the runner temp keeps the working
+          # tree exactly what this synchronization writes into it.
+          rm -rf "${RUNNER_TEMP}/spec-source"
+          git init --quiet "${RUNNER_TEMP}/spec-source"
+          git -C "${RUNNER_TEMP}/spec-source" remote add origin "https://github.com/${SPEC_REPO}.git"
+          git -C "${RUNNER_TEMP}/spec-source" fetch --quiet --depth 1 origin "${SOURCE_COMMIT}"
+          git -C "${RUNNER_TEMP}/spec-source" checkout --quiet --detach FETCH_HEAD
+          got="$(git -C "${RUNNER_TEMP}/spec-source" rev-parse HEAD)"
+          if [ "$got" != "${SOURCE_COMMIT}" ]; then
+            echo "::error::checked out ${got}, expected ${SOURCE_COMMIT}"
+            exit 1
+          fi
+
+          # PROVENANCE.md has exactly one writer, `tools/write_provenance.sh`,
+          # because it had two and drifted. That writer was added after the
+          # releases that exist today were tagged, so a checkout pinned to an
+          # older attested commit does not carry it. Its inputs — the templates
+          # and docs/generated/coverage.md — stay pinned either way; only the
+          # script is taken from the default branch, and only when the pinned
+          # commit predates it. Refusing would mean no note at all.
+          writer="${RUNNER_TEMP}/spec-source/tools/write_provenance.sh"
+          if [ ! -f "$writer" ]; then
+            git -C "${RUNNER_TEMP}/spec-source" fetch --quiet --depth 1 origin HEAD
+            tip="$(git -C "${RUNNER_TEMP}/spec-source" rev-parse FETCH_HEAD)"
+            git -C "${RUNNER_TEMP}/spec-source" show FETCH_HEAD:tools/write_provenance.sh > "$writer"
+            chmod +x "$writer"
+            echo "::warning::${SOURCE_COMMIT} predates tools/write_provenance.sh; taking it from ${tip}"
+            echo "WRITER_COMMIT=$tip" >> "$GITHUB_ENV"
+          else
+            echo "WRITER_COMMIT=${SOURCE_COMMIT}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up Go
+        if: env.PROCEED == 'true'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Build rules.lock from the attested manifest
+        if: env.PROCEED == 'true'
+        run: |
+          set -euo pipefail
+          manifest="${RUNNER_TEMP}/artifacts/businessid-manifest-${VERSION}.json"
+          field() { jq -r ".$1" "$manifest"; }
+
+          # Assembled beside the artefacts and checked against them before a byte
+          # of it reaches the tree. No comments: this file is generated, and the
+          # two things a reader would want explained live here instead.
+          #
+          # conformance_jsonl_sha256 is the digest of the DECOMPRESSED corpus,
+          # because that is what lands in spec/. The archive embeds a timestamp
+          # taken from SOURCE_DATE_EPOCH, so its digest moves with the source
+          # commit while its content does not. Expect it to stay put while
+          # conformance_sha256 moves: the JSONL is the reviewed source and carries
+          # no rules version, while the compiled corpus injects one into every
+          # expected report, so a version bump alone moves one and not the other.
+          {
+            printf 'rules_version = "%s"\n' "$(field rulesVersion)"
+            printf 'format_version = %s\n' "$(field formatVersion)"
+            printf 'rules_sha256 = "%s"\n' "$(field artifactSha256)"
+            printf 'conformance_sha256 = "%s"\n' "$(field conformanceSha256)"
+            printf 'conformance_jsonl_sha256 = "%s"\n' "$(field conformanceJsonlSha256)"
+            printf 'rules_proto_sha256 = "%s"\n' "$(field rulesProtoSha256)"
+            printf 'conformance_proto_sha256 = "%s"\n' "$(field conformanceProtoSha256)"
+            printf 'testee_proto_sha256 = "%s"\n' "$(field testeeProtoSha256)"
+            printf 'ir_doc_sha256 = "%s"\n' "$(field irDocSha256)"
+            printf 'features_doc_sha256 = "%s"\n' "$(field featuresDocSha256)"
+            printf 'stability = "%s"\n' "$(field stability)"
+            printf 'source_commit = "%s"\n' "${SOURCE_COMMIT}"
+            printf 'attestation_identity = "%s/%s@refs/tags/%s"\n' \
+              "${SPEC_REPO}" "${SIGNER_WORKFLOW}" "${TAG}"
+          } > "${RUNNER_TEMP}/rules.lock"
+
+          # `spec`'s own checker, from the commit that built the release: the
+          # digests the lock declares are re-derived from the artefacts rather
+          # than trusted from the manifest that named them.
+          "${RUNNER_TEMP}/spec-source/tools/check_lock.sh" \
+            "${RUNNER_TEMP}/rules.lock" "${RUNNER_TEMP}/artifacts" "${VERSION}"
+
+      - name: Write spec/ and rules.lock
+        if: env.PROCEED == 'true'
+        run: |
+          set -euo pipefail
+          a="${RUNNER_TEMP}/artifacts"
+          mkdir -p spec
+          cp "$a/businessid-rules-${VERSION}.binpb" spec/businessid-rules.binpb
+          cp "$a/businessid-conformance-${VERSION}.binpb" spec/businessid-conformance.binpb
+          gzip -dc "$a/businessid-conformance-${VERSION}.jsonl.gz" > spec/businessid-conformance.jsonl
+          for schema in rules.proto conformance.proto testee.proto ir.md features.md; do
+            cp "$a/$schema" "spec/$schema"
+          done
+          cp "${RUNNER_TEMP}/rules.lock" rules.lock
+
+          # spec/spec.md, spec/engine.md and spec/engine-kotlin.md are left
+          # alone. They are prose this engine is written against, they are not
+          # release artefacts, and no digest in rules.lock pins them — so they
+          # track the specification's default branch and not the commit a release
+          # was cut from. Rewinding them to the attested commit would delete
+          # sections written after it, including the one this workflow implements.
+
+      - name: Write spec/PROVENANCE.md
+        if: env.PROCEED == 'true'
+        env:
+          # `actions/setup-go` pins GOTOOLCHAIN to `local`, which forbids
+          # fetching a toolchain, and the `spec` module asks for a newer Go than
+          # a runner's default.
+          GOTOOLCHAIN: auto
+        run: |
+          set -euo pipefail
+          "${RUNNER_TEMP}/spec-source/tools/write_provenance.sh" \
+            "${RUNNER_TEMP}/spec-source" \
+            "${RUNNER_TEMP}/artifacts" \
+            "${VERSION}" \
+            "${SOURCE_COMMIT}" \
+            businessid-kotlin \
+            "${GITHUB_WORKSPACE}/spec/PROVENANCE.md"
+
+      # -- 4. regenerate the emitted code -------------------------------------
+
+      - name: Set up the JDK
+        if: env.PROCEED == 'true'
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up the Android SDK
+        if: env.PROCEED == 'true'
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: 'tools platform-tools platforms;android-36'
+
+      - name: Set up Gradle
+        if: env.PROCEED == 'true'
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Regenerate the emitted code
+        if: env.PROCEED == 'true'
+        # `--rerun` because a Gradle task that is up to date replays a verdict it
+        # never recomputed, and this one is being asked to recompute against a
+        # bundle that changed under it.
+        run: ./gradlew --console=plain generateEngine --rerun
+
+      # -- 5. the entry point of section 12.5 ---------------------------------
+
+      - name: Verify
+        id: verify
+        if: env.PROCEED == 'true'
+        # Section 11.4 asks for the pull request to be opened green or red, so a
+        # failure here must not stop the run. The job still ends non-zero, at the
+        # last step.
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./scripts/verify.sh 2>&1 | tee "${RUNNER_TEMP}/verify.log"
+
+      # -- 6. the pull request ------------------------------------------------
+
+      - name: Open the synchronization pull request
+        id: pr
+        if: env.PROCEED == 'true' && env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.repository.default_branch }}
+          VERIFY: ${{ steps.verify.outcome }}
+          WRITER_COMMIT: ${{ env.WRITER_COMMIT }}
+        run: |
+          set -euo pipefail
+          branch="rules/${VERSION}"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add --all -- spec rules.lock businessid/src/main/kotlin/io/libbusinessid/generated
+          if git diff --cached --quiet; then
+            echo "The release changed nothing this repository tracks; no pull request." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit --quiet -m "rules: update to ${VERSION}" \
+            -m "Synchronized from ${SPEC_REPO} ${TAG}, source commit ${SOURCE_COMMIT}."
+
+          # A re-run after a fixed defect has to replace its own branch rather
+          # than be refused as non fast forward, and --force-with-lease is the
+          # safe way. A lease needs something to compare against, so the branch
+          # is fetched first when it exists and pushed plainly when it does not.
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            git fetch --quiet origin "+${branch}:refs/remotes/origin/${branch}"
+            git push --quiet \
+              "--force-with-lease=${branch}:$(git rev-parse "refs/remotes/origin/${branch}")" \
+              --set-upstream origin "$branch"
+          else
+            git push --quiet --set-upstream origin "$branch"
+          fi
+
+          {
+            printf 'Automated synchronization of the LibBusinessID rules, by `.github/workflows/rules-sync.yml`.\n\n'
+            printf -- '- rules version: `%s`\n' "${VERSION}"
+            printf -- '- source tag: `%s`\n' "${TAG}"
+            printf -- '- source commit: `%s`, taken from the signing certificate\n' "${SOURCE_COMMIT}"
+            printf -- '- attested identity: `%s/%s@refs/tags/%s`\n' \
+              "${SPEC_REPO}" "${SIGNER_WORKFLOW}" "${TAG}"
+            printf -- '- artefacts verified: `SHA256SUMS`, then the provenance attestation of every subject\n'
+            if [ "${WRITER_COMMIT}" != "${SOURCE_COMMIT}" ]; then
+              printf -- '- `PROVENANCE.md` assembled with `tools/write_provenance.sh` from `%s`, because the attested commit predates it\n' \
+                "${WRITER_COMMIT}"
+            fi
+            printf '\n'
+            if [ "${VERIFY}" = "success" ]; then
+              printf '`./scripts/verify.sh` passed:\n\n```\n%s\n```\n' "$(tail -1 "${RUNNER_TEMP}/verify.log")"
+            else
+              printf '`./scripts/verify.sh` **failed**. Section 11.4: a red pull request is corrected, or the\n'
+              printf 'release is refused with the reason written down. It is never merged to unblock the chain.\n\n'
+              printf '```\n%s\n```\n' "$(head -c 8000 "${RUNNER_TEMP}/verify.log")"
+            fi
+          } > "${RUNNER_TEMP}/pr-body.md"
+
+          url="$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "$branch" --state open \
+            --json url --jq '.[0].url // ""')"
+          if [ -n "$url" ]; then
+            gh pr edit "$url" --title "rules: update to ${VERSION}" --body-file "${RUNNER_TEMP}/pr-body.md"
+          else
+            # --head and --base spelled out: gh infers them from the checkout it
+            # runs in, and a detached or unusual one makes it refuse a branch it
+            # has just pushed.
+            #
+            # This is where a repository that has not been told to allow it says
+            # so, with a message that does not name the setting. Measured here:
+            #   pull request create failed: GraphQL: GitHub Actions is not
+            #   permitted to create or approve pull requests (createPullRequest)
+            # The branch is already pushed either way, so a re-run after the
+            # setting is turned on reuses it and opens the pull request.
+            if ! url="$(gh pr create --repo "${GITHUB_REPOSITORY}" \
+              --head "$branch" --base "${BASE}" \
+              --title "rules: update to ${VERSION}" \
+              --body-file "${RUNNER_TEMP}/pr-body.md" 2>&1)"; then
+              printf '%s\n' "$url" >&2
+              echo "::error::Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests. The branch ${branch} is pushed; re-run this workflow once it is on."
+              exit 1
+            fi
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          printf 'Pull request: %s\n' "$url" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Ask for auto-merge
+        if: steps.pr.outputs.url != '' && steps.verify.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.pr.outputs.url }}
+        run: |
+          set -euo pipefail
+          # Only on a green verification. Auto-merge merges when nothing
+          # *blocks*, which is not the same as on green: without a branch
+          # protection requiring the section 12.5 entry point, a pull request
+          # with no checks at all counts as unblocked. This condition is the
+          # guard this workflow owns; the branch protection is the one the
+          # repository owes, and README.md names both.
+          if ! gh pr merge "$URL" --auto --squash; then
+            echo "::warning::auto-merge could not be enabled on ${URL}"
+            {
+              echo 'Auto-merge could not be enabled. It needs both of:'
+              echo ''
+              echo '- Settings → General → Pull Requests → **Allow auto-merge**;'
+              echo '- Settings → Branches → a protection on the default branch requiring the CI'
+              echo '  job that runs `./scripts/verify.sh`, and requiring nothing else.'
+              echo ''
+              echo 'The pull request is open and green; it merges by hand until then.'
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail if the verification did not pass
+        if: env.PROCEED == 'true' && steps.verify.outcome == 'failure'
+        run: |
+          echo "::error::./scripts/verify.sh failed. The pull request carries the failure and is not to be merged."
+          exit 1

@@ -9,6 +9,106 @@ and the whole corpus passes under it.
 
 ## Open
 
+### "the newest release" is the one endpoint that cannot see any release there is
+
+**Measured.** `engine.md` section 11.4 has the engine compare *la dernière
+release de `spec`* to its own `rules.lock`. The endpoint that phrase names —
+`/repos/libbusinessid/spec/releases/latest`, which is what `gh release view`
+reads with no tag — excludes pre-releases, and `release.yml` marks every ruleset
+whose stability is not `stable` as a pre-release, deliberately, so that "a
+consumer or a downstream script never picks it up by accident". Both releases
+published so far are pre-releases. Run against `/latest` today:
+
+```text
+$ gh release view --repo libbusinessid/spec
+release not found
+```
+
+A synchronization built on it would have nothing to do for as long as the ruleset
+stays alpha, and would look perfectly healthy doing it.
+
+**What this engine does.** `.github/workflows/rules-sync.yml` lists
+`/repos/{owner}/{repo}/releases` and takes the newest non-draft entry by
+publication date, pre-release or not, and says why in a comment. The safety
+`release.yml` wants is real but it is not this repository's: a pre-release
+arrives here as a pull request that a human reads, not as a published artefact.
+
+**Proposed.** Say in 11.4 which release is meant while the ruleset is alpha —
+either "the newest published release, pre-releases included" or "the newest
+stable release, and nothing before the ruleset is stable".
+
+### the only writer of `PROVENANCE.md` postdates every release it has to describe
+
+**Measured.** Section 11.4 step 3 has the engine write `spec/PROVENANCE.md`, and
+`tools/write_provenance.sh` is its single writer since #84 — the change that
+fixed it having had two. Both published releases were cut before that change:
+
+```text
+$ git ls-tree --name-only b264614 tools/ | grep provenance
+tools/check_provenance.sh
+```
+
+`b264614` is the source commit of `v0.1.1`, read from its signing certificate. A
+downstream synchronization that pins the specification checkout to the attested
+commit — which is the only commit it has any reason to trust — finds no writer
+there, for `v0.1.0` and `v0.1.1` alike. Its inputs are all present and
+unchanged: `docs/spec/provenance/body.md`, `kotlin.md` and
+`docs/generated/coverage.md` are byte identical between `b264614` and the current
+default branch.
+
+**What this engine does.** It pins the checkout to the attested commit, and takes
+`tools/write_provenance.sh` alone from the default branch when that commit
+predates it, warning and recording both commits in the pull request body. Every
+input the note quotes stays pinned to the release. Refusing instead would mean no
+note at all, and the run reproduces the committed `spec/PROVENANCE.md` byte for
+byte.
+
+**Proposed.** Nothing, if the next release fixes it by construction — any tag cut
+after #84 carries the writer. Worth a line in 11.4 saying the writer is taken
+from the release, so that no engine invents a second one.
+
+### `PROVENANCE.md` tells the reader the lock says something it does not
+
+**Measured.** `docs/spec/provenance/body.md` ends with
+
+```text
+`rules.lock` carries no `attestation_identity` because no release exists yet;
+its header explains this.
+```
+
+Two releases exist, this repository synchronized from one, and its `rules.lock`
+carries `attestation_identity = "libbusinessid/spec/.github/workflows/release.yml@refs/tags/v0.1.1"`
+and no header at all. The sentence is already false in the committed tree, and it
+is the paragraph titled "Verifying integrity" — the one a reader consults to
+decide what to check.
+
+**What this engine does.** Nothing: it copies the note as assembled, because the
+alternative is a second writer. The two figures a test does check — rules version
+and source commit — are correct.
+
+**Proposed.** Make that paragraph describe both cases, or key it off whether the
+lock carries the field.
+
+### `tools/sync_engines.sh` overwrites an attested lock with a pre-release one
+
+**Measured.** In this checkout, `rules.lock` at `HEAD` names
+`source_commit = "b264614…"` and the attested identity of `v0.1.1`. A developer
+run of `tools/sync_engines.sh` left the working tree with the pre-release
+template instead: the header saying no release has been tagged yet,
+`attestation_identity` gone, and `source_commit` rewound to the specification's
+local `HEAD` — a commit no release was built from. `spec/PROVENANCE.md` followed
+it. Nothing warned; the digests still matched, so `verify-lock.sh` passes on
+either.
+
+**What this engine does.** It does not commit that regression, and its
+synchronization workflow rebuilds the lock from the attested manifest, so a later
+sync repairs it. But the lock also pins the conformance runner, and a lock that
+silently rewinds it makes the corpus judged by a comparator from another commit.
+
+**Proposed.** Have `sync_engines.sh` refuse, or at least warn, when the
+`rules.lock` it is about to replace carries an `attestation_identity`: after the
+first release it is downgrading a verified pin to an unverified one.
+
 ### `engine.md` numbers two different sections 12.5
 
 **Measured.** At `2026.08.32` the document carries both

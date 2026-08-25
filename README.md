@@ -254,6 +254,47 @@ twenty-five checks, and names the check that refused it.
 | `spec/` | The pinned specification, schemas, ruleset and corpus. |
 | `rules.lock` | The digests of every file above. |
 
+## How the rules get here
+
+The engine fetches the release; the release does not push into the engine.
+`.github/workflows/rules-sync.yml` runs daily and on demand, compares the newest
+`spec` release to `rules.lock`, and stops when they agree. When they differ it
+downloads the artefacts into the runner's temporary directory, verifies
+`SHA256SUMS` and then the provenance attestation — owner, repository, signing
+workflow, tag, and the commit read from the signing certificate rather than from
+the manifest the release itself wrote — and only then writes `spec/`,
+`rules.lock` and `spec/PROVENANCE.md`, regenerates the emitted code, runs
+`./scripts/verify.sh` and opens a pull request. A release whose attestation does
+not verify never touches the working tree.
+
+Two things follow from doing it this way. Regeneration needs this engine's
+toolchain, which `spec` does not have, so the pull request carries the emitted
+code and not only the bundle. And `spec` needs no write token here: the workflow
+uses the `GITHUB_TOKEN` GitHub already gives it, so a compromise of `spec` stops
+at `spec`. The trigger is a clock rather than a pushed event for the same
+reason — a `repository_dispatch` would hand that token straight back.
+
+The pull request is opened green or red. Green is the ordinary case: new business
+rules are data, and the emitted code follows. Red means the release brought
+something this engine does not do yet, and **a red pull request is never merged
+to unblock the chain** — it is corrected, or the release is refused with the
+reason written down.
+
+### What the repository has to allow
+
+The workflow asks for auto-merge on a green pull request, so a mechanical
+resynchronization needs nobody and only what stayed red wants attention. Three
+settings decide whether that is safe, and none of them can be granted by the
+token:
+
+| Setting | Where | Why |
+| --- | --- | --- |
+| Allow GitHub Actions to create and approve pull requests | Settings → Actions → General → Workflow permissions | Without it `gh pr create` refuses and step 6 cannot run at all. |
+| Allow auto-merge | Settings → General → Pull Requests | Without it `gh pr merge --auto` refuses. |
+| A branch protection on `main` requiring the CI job that runs `./scripts/verify.sh`, and requiring nothing else | Settings → Branches | Auto-merge merges when nothing *blocks*, which is not the same as on green. A second required check would give "green" two definitions, and auto-merge follows the weaker one. The scheduled workflow and Dependabot must not be required checks. |
+
+Tagging and publishing stay manual. Nothing in this workflow releases anything.
+
 ## Conformance
 
 The runner comes from the `spec` repository and from nowhere else, pinned to the

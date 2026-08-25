@@ -33,6 +33,31 @@ independently.
   run; a step that was skipped or replayed fails the whole command. A step that
   *cannot* run — the Android consumer with no SDK — fails too, rather than being
   omitted from a line that claims the work was done.
+- `.github/workflows/rules-sync.yml`, the synchronization `engine.md` section
+  11.4 asks for: the engine fetches the release rather than the release pushing
+  into the engine. Daily and on demand, it compares the newest `spec` release to
+  `rules.lock` and does nothing when they agree; otherwise it downloads the
+  artefacts, verifies `SHA256SUMS` and then the provenance attestation, writes
+  `spec/`, `rules.lock` and `spec/PROVENANCE.md`, regenerates the emitted code,
+  runs `./scripts/verify.sh`, opens a pull request green or red, and asks for
+  auto-merge only when it is green. Nothing reaches the working tree before the
+  attestation verifies: the artefacts are downloaded into the runner's temporary
+  directory and the specification is cloned there too.
+- The commit the synchronization pins to is read from the signing certificate,
+  not from the manifest. The manifest is a file the release workflow wrote, so
+  its `sourceCommit` is predicate data that workflow controls; the certificate's
+  source repository digest comes from the OIDC token and cannot be forged by it.
+  The two are compared, and disagreement fails the run.
+- The workflow rehearses itself on the pull requests that change it, in dry run:
+  download, both verifications, the writes, the regeneration and
+  `./scripts/verify.sh`, but no push and no pull request. `workflow_dispatch`
+  cannot reach a file that is not on the default branch yet, so without this the
+  first run of a change to it would be its first run in production — the shape of
+  defect this repository keeps finding.
+- The sync uses this repository's own `GITHUB_TOKEN`. The cross-repository write
+  token `spec` held on four engines is no longer needed, and the blast radius of
+  a compromise of `spec` stops at `spec`. `README.md` names the three repository
+  settings the token cannot grant by itself.
 
 ### Fixed
 
