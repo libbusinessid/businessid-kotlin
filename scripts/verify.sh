@@ -140,15 +140,15 @@ export ANDROID_HOME="$ANDROID_SDK"
 step "consumers" "${GRADLE[@]}" consumerJvmTest consumerAndroidTest
 fresh "consumers" "consumer/jvm/build/test-results consumer/android/build/test-results"
 
-# The runner comes from `spec` and from nowhere else, pinned to the commit
-# rules.lock records under source_commit — the same commit as the corpus, so it
-# is impossible to judge a corpus with another comparator.
-SOURCE_COMMIT="$(grep '^source_commit' rules.lock | cut -d'"' -f2)"
 # Every declared dependency resolves. A moved or withdrawn artefact fails here
 # rather than at a release, and this is where "packaging is verified" stops being
 # a claim about the jar alone.
 step "dependency resolution" "${GRADLE[@]}" resolveAllDependencies
 
+# The runner comes from `spec` and from nowhere else, pinned to the commit
+# rules.lock records under source_commit — the same commit as the corpus, so it
+# is impossible to judge a corpus with another comparator.
+SOURCE_COMMIT="$(grep '^source_commit' rules.lock | cut -d'"' -f2)"
 step "conformance testee" "${GRADLE[@]}" :testee:installDist
 step "conformance" env GOTOOLCHAIN=auto go run \
   "github.com/libbusinessid/spec/cmd/conformance-runner@$SOURCE_COMMIT" \
