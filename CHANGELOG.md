@@ -42,6 +42,16 @@ independently.
 - Entry point citations moved from `engine.md` section 12.5 to **12.6**, which
   is where the single command now lives. Mutation testing keeps 12.5. The
   ambiguity this repository reported is resolved upstream.
+- `SPEC-ISSUES.md` keeps one open question, and it is new: `tools/check_lock.sh`
+  verifies seven of the eight digests `rules.lock` declares, skipping
+  `conformance_jsonl_sha256` — the field section 16 names as the one that has
+  already caused engines to disagree about a release. Measured, reproduced, and
+  filed as [entid-org/spec#95](https://github.com/entid-org/spec/issues/95).
+  This engine's own `verify-lock.sh` verifies all eight, so nothing is at risk
+  here. Five earlier entries move to settled upstream, including the two that
+  were still open: `/releases/latest` cannot see a pre-release (11.4 now says
+  *la plus récente, pas « latest »*) and `tools/sync_engines.sh` overwriting an
+  attested lock (it refuses now, and `--force-local` is the deliberate way past).
 - `LoaderFixtureTest` no longer remembers at which byte the two check 16
   fixtures differ. It asserted offset 513; this resync moved the fixtures and it
   failed for a reason that had nothing to do with what it checks. It now asserts
