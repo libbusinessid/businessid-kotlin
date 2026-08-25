@@ -198,22 +198,16 @@ tasks.register<JavaExec>("mutationTest") {
     val sources = main.kotlin.srcDirs.filter { it.isDirectory }.joinToString(",") { it.absolutePath }
     val classes = main.output.classesDirs.joinToString(",") { it.absolutePath }
     val runtime = test.runtimeClasspath.files.map { it.absolutePath }
-    val jvmProperties = listOf(
-        "-Dbusinessid.spec.dir=" + rootProject.layout.projectDirectory.dir("spec").asFile.absolutePath,
-        "-Dbusinessid.project.version=" + project.version,
-        "-Dbusinessid.rules.version=" + rootProject.layout.projectDirectory.file("rules.lock").asFile
-            .readLines()
-            .first { it.trimStart().startsWith("rules_version") }
-            .substringAfter('"')
-            .substringBefore('"'),
-        "-Dbusinessid.test.classes=" + layout.buildDirectory.dir("classes/kotlin/test").get().asFile.absolutePath,
-        "-Dbusinessid.jar=" + tasks.jar.get().archiveFile.get().asFile.absolutePath,
-        "-Dbusinessid.pom=" +
-            layout.buildDirectory.file("publications/maven/pom-default.xml").get().asFile.absolutePath,
-        "-Duser.language=tr",
-        "-Duser.country=TR",
-        "-Dfile.encoding=UTF-8",
-    ).joinToString(",")
+    // Read off `tasks.test` rather than restated. Pitest runs the suite in a JVM
+    // of its own, and a test that throws for a missing property is reported as
+    // "the suite is not green" with no hint of which property — which is exactly
+    // what a hand written copy of this list produced when the test task gained
+    // `businessid.project.group` and the copy did not. There is one definition
+    // of what the suite needs, and it is the task that already runs it.
+    val jvmProperties = tasks.test.get().systemProperties
+        .toSortedMap()
+        .map { (key, value) -> "-D$key=$value" }
+        .joinToString(",")
     args(
         "--reportDir", reportDir.absolutePath,
         "--targetClasses", "io.libbusinessid.runtime.*,io.libbusinessid.internal.*",

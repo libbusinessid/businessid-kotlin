@@ -91,6 +91,16 @@ tasks.withType<Test>().configureEach {
         "businessid.test.classes",
         layout.buildDirectory.dir("classes/kotlin/test").get().asFile.absolutePath,
     )
+    // TesteeHonestyTest reads the compiled main classes to prove the testee
+    // references no file system API. It found them at a path of its own before,
+    // relative to the project directory — so a run on another toolchain read the
+    // *pinned* build's classes and reported on those, and a cold checkout found
+    // nothing at all. Its own guard caught the second; the first is why the path
+    // comes from the build now.
+    systemProperty(
+        "businessid.main.classes",
+        layout.buildDirectory.dir("classes/kotlin/main").get().asFile.absolutePath,
+    )
     testLogging {
         events("failed")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

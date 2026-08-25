@@ -92,8 +92,12 @@ class TesteeHonestyTest {
 
     @Test
     fun `the compiled testee reaches no file system`() {
-        val classes = File("build/classes/kotlin/main").walkTopDown().filter { it.extension == "class" }.toList()
-        assertTrue(classes.isNotEmpty(), "no compiled testee class found")
+        // From the build rather than from a path relative to the working
+        // directory: `-Pbusinessid.toolchain` builds elsewhere, and a literal
+        // here read the classes of whichever build happened to have run last.
+        val directory = File(requireNotNull(System.getProperty("businessid.main.classes")))
+        val classes = directory.walkTopDown().filter { it.extension == "class" }.toList()
+        assertTrue(classes.isNotEmpty(), "no compiled testee class found under $directory")
         val forbidden = listOf(
             "java/io/File",
             "java/io/FileInputStream",
